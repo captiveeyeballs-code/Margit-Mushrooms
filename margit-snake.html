@@ -1,0 +1,1728 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Margit Island Snake Game (Offline HTML5)</title>
+  <style>
+    :root { --w:1200px; --h:900px; --text:#eef2ff; --muted:#a9b1d6; }
+    html, body { height:100%; margin:0; background:#050812; color:var(--text); font-family:system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
+    .wrap { height:100%; display:flex; align-items:center; justify-content:center; padding:16px; box-sizing:border-box; }
+    .stage { position:relative; width:var(--w); height:var(--h); box-shadow:0 20px 60px rgba(0,0,0,.55); border-radius:14px; overflow:hidden; }
+    canvas { display:block; width:var(--w); height:var(--h); background:#0f1a1a; }
+    .hudHelp { position:absolute; left:14px; bottom:10px; font-size:12px; color:rgba(255,255,255,.75); text-shadow:0 1px 2px rgba(0,0,0,.6); user-select:none; }
+    .overlay {
+      position:absolute; inset:0;
+      display:flex; align-items:center; justify-content:center;
+      background:linear-gradient(180deg, rgba(5,8,18,.78), rgba(5,8,18,.92));
+      padding:24px; box-sizing:border-box;
+    }
+    .overlay.hidden { display:none; }
+    .card {
+      width:min(840px, 92%);
+      background:linear-gradient(180deg, rgba(16,24,56,.92), rgba(11,16,32,.92));
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:16px;
+      padding:18px 18px 16px;
+      box-shadow:0 18px 50px rgba(0,0,0,.45);
+    }
+    .title { font-size:22px; font-weight:700; margin:0 0 8px; }
+    .sub { margin:0 0 14px; color:var(--muted); line-height:1.35; }
+    .row { display:flex; gap:14px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; }
+    .modeBox { flex:1 1 480px; }
+    .controlsBox { flex:1 1 280px; background:rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.10); border-radius:14px; padding:12px; }
+    .controlsBox h3 { margin:0 0 8px; font-size:14px; color:rgba(255,255,255,.9); }
+    .controlsBox ul { margin:0; padding-left:18px; color:rgba(255,255,255,.78); font-size:13px; line-height:1.4; }
+    .modes { display:grid; gap:10px; margin:10px 0 12px; }
+    .mode {
+      display:flex; gap:10px; align-items:flex-start;
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px; padding:10px 12px;
+      cursor:pointer; user-select:none;
+    }
+    .mode:hover { border-color:rgba(255,255,255,.18); }
+    .mode input { margin-top:2px; }
+    .mode strong { display:block; font-size:14px; }
+    .mode span { display:block; font-size:12px; color:rgba(255,255,255,.7); margin-top:2px; }
+
+    .tweaks {
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:10px;
+      margin:10px 0 14px;
+    }
+    .tweak {
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:10px 12px;
+    }
+    .tweak label { display:block; font-size:13px; font-weight:700; margin-bottom:6px; color:rgba(255,255,255,.92); }
+    .tweak select {
+      width:100%;
+      background:rgba(0,0,0,.25);
+      border:1px solid rgba(255,255,255,.12);
+      border-radius:12px;
+      color:rgba(255,255,255,.92);
+      padding:10px 10px;
+      font-size:13px;
+      outline:none;
+    }
+    .tweak small { display:block; margin-top:6px; color:rgba(255,255,255,.70); font-size:12px; line-height:1.3; }
+
+    .actions { display:flex; gap:10px; justify-content:flex-end; flex-wrap:wrap; }
+    button {
+      appearance:none; border:0; cursor:pointer;
+      padding:10px 14px; border-radius:12px;
+      color:var(--text);
+      background:#2d4cff;
+      font-weight:700; letter-spacing:.2px;
+      box-shadow:0 8px 22px rgba(45,76,255,.28);
+    }
+    button.secondary {
+      background:rgba(255,255,255,.10);
+      box-shadow:none; border:1px solid rgba(255,255,255,.14);
+      color:rgba(255,255,255,.92);
+    }
+    .hint { margin-top:10px; font-size:12px; color:rgba(255,255,255,.68); }
+    .winnerLine { font-size:16px; margin:8px 0 10px; }
+    .scoreGrid { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin:10px 0 14px; }
+    .pill {
+      background:rgba(255,255,255,.04);
+      border:1px solid rgba(255,255,255,.10);
+      border-radius:14px;
+      padding:10px 12px;
+    }
+    .pill b { display:block; font-size:13px; margin-bottom:3px; }
+    .pill div { font-size:12px; color:rgba(255,255,255,.78); line-height:1.35; }
+
+    /* ── Mobile: fill the whole screen (portrait-first) ── */
+    @media (max-width: 768px) {
+      html, body { overflow: hidden; height: 100%; margin: 0; }
+      .wrap { padding: 0; }
+      /* Fix the stage to the full viewport — bypasses all height-chain issues */
+      .stage {
+        position: fixed !important;
+        top: 0 !important; right: 0 !important;
+        bottom: 0 !important; left: 0 !important;
+        width: auto !important;
+        height: auto !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+      }
+      /* Canvas stretches to fill the stage completely */
+      canvas {
+        width: 100% !important;
+        height: 100% !important;
+      }
+      .hudHelp { display: none; }
+    }
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="stage">
+    <canvas id="game" width="1200" height="900"></canvas>
+    <div class="hudHelp">Keys: Arrow (Jay) • WASD (Dani) • P pause • R restart • Space/Enter start</div>
+
+    <!-- MENU OVERLAY -->
+    <div id="menuOverlay" class="overlay">
+      <div class="card">
+        <h1 class="title">Margit Island Snake Game</h1>
+        <p class="sub">
+          Offline, self-contained HTML5 Canvas game. Two snakes (Jay & Dani), mushrooms, and Rita hazard.
+          Audio starts after your first click/keydown (browser policy).
+        </p>
+
+        <div class="row">
+          <div class="modeBox">
+            <div class="modes" id="modeList">
+              <label class="mode">
+                <input type="radio" name="mode" value="single_jay" checked />
+                <div>
+                  <strong>Single Player: Jay (human) + Dani (AI)</strong>
+                  <span>Compete for mushrooms. Jay uses Arrow Keys. Dani is competitive AI.</span>
+                </div>
+              </label>
+              <label class="mode">
+                <input type="radio" name="mode" value="single_dani" />
+                <div>
+                  <strong>Single Player: Dani (human) + Jay (AI)</strong>
+                  <span>Compete for mushrooms. Dani uses WASD. Jay is competitive AI.</span>
+                </div>
+              </label>
+              <label class="mode">
+                <input type="radio" name="mode" value="two_player" />
+                <div>
+                  <strong>Two Player: Jay + Dani (both human)</strong>
+                  <span>Compete simultaneously. No reverse-turns allowed.</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="tweaks">
+              <div class="tweak">
+                <label for="speedLevel">How, High Are You?</label>
+                <select id="speedLevel">
+                  <option value="stoned">Stoned (slow)</option>
+                  <option value="high" selected>High (medium)</option>
+                  <option value="super">Super High (fast)</option>
+                </select>
+                <small>This ONLY changes snake speed. AI is always competitive for mushrooms.</small>
+              </div>
+
+              <div class="tweak">
+                <label>Rita</label>
+                <select disabled>
+                  <option selected>Psycho (always)</option>
+                </select>
+                <small>Rita is always fast. She drops multiple poops per pass.</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="controlsBox">
+            <h3>Rules</h3>
+            <ul>
+              <li>Grid: 20px cells. Snakes move 1 cell per tick.</li>
+              <li>Mushroom: +1 score, +1 growth for that snake.</li>
+              <li><b>Winner rule:</b> the snake that crashes loses (even if it had more points).</li>
+              <li>Rita appears every 15 seconds: white 2×2 hazard moving continuously.</li>
+              <li>Rita drops multiple 💩 poops per pass (fart sounds).</li>
+              <li><b>Poop effect:</b> hitting a poop shrinks your snake by 1 segment.</li>
+              <li>Collision with wall, self, other snake, or Rita = game over.</li>
+              <li>High scores saved in localStorage (per snake).</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="menuHow">How to Start</button>
+          <button id="menuStart">Start (Space/Enter)</button>
+        </div>
+        <div class="hint" id="menuHint">
+          Tip: Click the game once or press any key to enable audio.
+        </div>
+      </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="gameOverOverlay" class="overlay hidden">
+      <div class="card">
+        <h1 class="title">Game Over</h1>
+        <div class="winnerLine" id="winnerLine">Winner: —</div>
+
+        <div class="scoreGrid">
+          <div class="pill">
+            <b>Jay</b>
+            <div>Score: <span id="jayScoreEnd">0</span></div>
+            <div>High: <span id="jayHighEnd">0</span></div>
+          </div>
+          <div class="pill">
+            <b>Dani</b>
+            <div>Score: <span id="daniScoreEnd">0</span></div>
+            <div>High: <span id="daniHighEnd">0</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="goMenu">Back to Menu</button>
+          <button id="restartBtn">Restart (R)</button>
+        </div>
+        <div class="hint">Press R to restart quickly, or P to pause/unpause during play.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // =========================
+  // CONFIG
+  // =========================
+  const CANVAS_W = 1200;
+  const CANVAS_H = 900;
+  const CELL = 20;
+  const GRID_W = CANVAS_W / CELL; // 60
+  const GRID_H = CANVAS_H / CELL; // 45
+
+  const RITA_SPAWN_INTERVAL = 15.0;   // seconds (real time)
+  const MUSHROOM_COUNT_DEFAULT = 1;
+
+  const POOP_LINGER_AFTER_RITA_LEAVES = 4.0; // seconds after Rita exits screen
+  const POOP_DESPAWN_FADE = 0.6;             // seconds fade out
+  const MAX_ACTIVE_POOPS = 120;
+
+  // Poop trail tuning (guarantees visibility)
+  const POOP_DROP_BASE_INTERVAL_MIN = 0.18;
+  const POOP_DROP_BASE_INTERVAL_MAX = 0.32;
+  const POOP_TRAIL_BACK_CELLS = 2;           // how many cells behind Rita
+  const POOP_TRAIL_SIDE_CELLS = 1;           // random sideways wiggle (-1..+1)
+
+  const LS_KEY_JAY = "margit_snake_high_jay";
+  const LS_KEY_DANI = "margit_snake_high_dani";
+
+  // Deterministic neighbor order for BFS & tie-breaking.
+  const DIRS = [
+    { name:"U", x: 0, y:-1 },
+    { name:"R", x: 1, y: 0 },
+    { name:"D", x: 0, y: 1 },
+    { name:"L", x:-1, y: 0 },
+  ];
+  const DIR_BY_NAME = new Map(DIRS.map(d => [d.name, d]));
+  const OPP = { U:"D", D:"U", L:"R", R:"L" };
+
+  // =========================
+  // HELPERS
+  // =========================
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const key2 = (x, y) => `${x},${y}`;
+
+  function rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
+  }
+  function nowSec() { return performance.now() * 0.001; }
+
+  // =========================
+  // SIMPLE SEEDED RNG (deterministic per run)
+  // =========================
+  class RNG {
+    constructor(seed) { this.s = (seed >>> 0) || 0x12345678; } // xorshift32
+    nextU32() {
+      let x = this.s;
+      x ^= x << 13; x >>>= 0;
+      x ^= x >>> 17; x >>>= 0;
+      x ^= x << 5;  x >>>= 0;
+      this.s = x;
+      return x;
+    }
+    next() { return this.nextU32() / 0xFFFFFFFF; } // [0,1]
+    int(a, b) { return a + (this.nextU32() % (b - a + 1)); }
+  }
+
+  // =========================
+  // ASSET LOADING (offline optional)
+  // =========================
+  function loadOptionalImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload = () => resolve({ ok:true, img });
+      img.onerror = () => resolve({ ok:false, img:null });
+      img.src = src;
+    });
+  }
+
+  // =========================
+  // AUDIO (WebAudio oscillators only; init on first user interaction)
+  // =========================
+  class AudioSystem {
+    constructor() {
+      this.ctx = null;
+      this.master = null;
+      this.enabled = false;
+      this.started = false;
+    }
+    init() {
+      if (this.started) return;
+      this.started = true;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new Ctx();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.48;
+        this.master.connect(this.ctx.destination);
+        this.enabled = true;
+      } catch {
+        this.enabled = false;
+      }
+    }
+    _ensureRunning() {
+      if (!this.enabled || !this.ctx) return false;
+      if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+      return true;
+    }
+
+    pickupBlip() {
+      if (!this._ensureRunning()) return;
+      const t = this.ctx.currentTime;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.55, t + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+      const osc1 = this.ctx.createOscillator();
+      osc1.type = "triangle";
+      osc1.frequency.setValueAtTime(1046.5, t);
+      osc1.frequency.setValueAtTime(1318.5, t + 0.045);
+      osc1.frequency.setValueAtTime(1568.0, t + 0.090);
+      osc1.frequency.exponentialRampToValueAtTime(2093.0, t + 0.16);
+
+      const osc2 = this.ctx.createOscillator();
+      osc2.type = "sine";
+      osc2.frequency.setValueAtTime(2093.0, t + 0.02);
+      osc2.frequency.exponentialRampToValueAtTime(3136.0, t + 0.14);
+
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(5200, t);
+
+      osc1.connect(lp);
+      osc2.connect(lp);
+      lp.connect(gain);
+      gain.connect(this.master);
+
+      osc1.start(t);
+      osc2.start(t + 0.02);
+      osc1.stop(t + 0.19);
+      osc2.stop(t + 0.19);
+    }
+
+    ritaSpawnSwell() {
+      if (!this._ensureRunning()) return;
+      const t = this.ctx.currentTime;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.75, t + 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.95);
+
+      const filter = this.ctx.createBiquadFilter();
+      filter.type = "lowpass";
+      filter.frequency.setValueAtTime(140, t);
+      filter.frequency.exponentialRampToValueAtTime(900, t + 0.30);
+      filter.frequency.exponentialRampToValueAtTime(180, t + 0.95);
+
+      const oscA = this.ctx.createOscillator();
+      const oscB = this.ctx.createOscillator();
+      oscA.type = "sawtooth";
+      oscB.type = "sawtooth";
+      oscA.frequency.setValueAtTime(48, t);
+      oscB.frequency.setValueAtTime(50, t);
+
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(5.0, t);
+      lfoGain.gain.setValueAtTime(80, t);
+      lfo.connect(lfoGain);
+      lfoGain.connect(filter.frequency);
+
+      oscA.connect(filter);
+      oscB.connect(filter);
+      filter.connect(gain);
+      gain.connect(this.master);
+
+      lfo.start(t);
+      oscA.start(t);
+      oscB.start(t);
+      oscA.stop(t + 1.0);
+      oscB.stop(t + 1.0);
+      lfo.stop(t + 1.0);
+    }
+
+    fart() {
+      if (!this._ensureRunning()) return;
+      const t = this.ctx.currentTime;
+
+      const gain = this.ctx.createGain();
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.85, t + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(450, t);
+      lp.frequency.exponentialRampToValueAtTime(180, t + 0.12);
+      lp.frequency.exponentialRampToValueAtTime(300, t + 0.26);
+
+      const osc1 = this.ctx.createOscillator();
+      osc1.type = "square";
+      osc1.frequency.setValueAtTime(110, t);
+      osc1.frequency.exponentialRampToValueAtTime(45, t + 0.22);
+
+      const osc2 = this.ctx.createOscillator();
+      osc2.type = "triangle";
+      osc2.frequency.setValueAtTime(85, t + 0.01);
+      osc2.frequency.exponentialRampToValueAtTime(35, t + 0.23);
+
+      const lfo = this.ctx.createOscillator();
+      const lfoGain = this.ctx.createGain();
+      lfo.type = "sine";
+      lfo.frequency.setValueAtTime(22, t);
+      lfoGain.gain.setValueAtTime(0.35, t);
+      lfo.connect(lfoGain);
+      lfoGain.connect(gain.gain);
+
+      osc1.connect(lp);
+      osc2.connect(lp);
+      lp.connect(gain);
+      gain.connect(this.master);
+
+      lfo.start(t);
+      osc1.start(t);
+      osc2.start(t + 0.01);
+      osc1.stop(t + 0.30);
+      osc2.stop(t + 0.30);
+      lfo.stop(t + 0.30);
+    }
+  }
+
+  // =========================
+  // GAME ENTITIES
+  // =========================
+  class Snake {
+    constructor(id, label, headImgRef, colorBody, colorOutline) {
+      this.id = id;
+      this.label = label;
+      this.headImgRef = headImgRef;
+      this.colorBody = colorBody;
+      this.colorOutline = colorOutline;
+
+      this.isHuman = true;
+      this.controls = null;
+
+      this.body = [];
+      this.dir = "R";
+      this.nextDir = "R";
+
+      this.pendingGrowth = 0;
+      this.score = 0;
+
+      this.aiLastWanted = "R";
+    }
+
+    reset(startCells, dirName) {
+      this.body = startCells.map(p => ({ x:p.x, y:p.y }));
+      this.dir = dirName;
+      this.nextDir = dirName;
+      this.pendingGrowth = 0;
+      this.score = 0;
+      this.aiLastWanted = dirName;
+    }
+
+    head() { return this.body[0]; }
+
+    setDesiredDir(dirName) {
+      if (!DIR_BY_NAME.has(dirName)) return;
+      if (OPP[dirName] === this.dir) return;
+      this.nextDir = dirName;
+    }
+
+    lockInDirection() {
+      if (OPP[this.nextDir] !== this.dir) this.dir = this.nextDir;
+    }
+
+    computeNextBody() {
+      const d = DIR_BY_NAME.get(this.dir);
+      const head = this.head();
+      const nx = head.x + d.x;
+      const ny = head.y + d.y;
+
+      const nextBody = [{ x:nx, y:ny }, ...this.body.map(s => ({ x:s.x, y:s.y }))];
+      const willGrow = this.pendingGrowth > 0;
+      if (!willGrow) nextBody.pop();
+      return { nextBody, newHead: nextBody[0], willGrow };
+    }
+
+    commitNext(nextBody, willGrow) {
+      this.body = nextBody;
+      if (willGrow) this.pendingGrowth = Math.max(0, this.pendingGrowth - 1);
+    }
+
+    shrinkByOne() {
+      if (this.body.length <= 1) return false;
+      this.body.pop();
+      return true;
+    }
+  }
+
+  class Rita {
+    constructor() {
+      this.active = false;
+      this.x = 0; this.y = 0;
+      this.vx = 0; this.vy = 0;
+      this.w = CELL * 2;
+      this.h = CELL * 2;
+      this.speed = 200;
+
+      this.life = 0;
+      this.nextPoopAt = 0.3;
+    }
+
+    setSpeed(pxPerSec) { this.speed = pxPerSec; }
+
+    spawn(rng) {
+      const edge = rng.int(0, 3);
+
+      const gx = rng.int(0, GRID_W - 2) * CELL;
+      const gy = rng.int(0, GRID_H - 2) * CELL;
+
+      let x, y, ang;
+      if (edge === 0) {
+        x = -this.w;
+        y = gy;
+        ang = (rng.next() * (Math.PI/2)) - (Math.PI/4);
+      } else if (edge === 1) {
+        x = CANVAS_W;
+        y = gy;
+        ang = Math.PI + (rng.next() * (Math.PI/2)) - (Math.PI/4);
+      } else if (edge === 2) {
+        x = gx;
+        y = -this.h;
+        ang = (Math.PI/2) + (rng.next() * (Math.PI/2)) - (Math.PI/4);
+      } else {
+        x = gx;
+        y = CANVAS_H;
+        ang = (-Math.PI/2) + (rng.next() * (Math.PI/2)) - (Math.PI/4);
+      }
+
+      this.x = x;
+      this.y = y;
+      this.vx = Math.cos(ang) * this.speed;
+      this.vy = Math.sin(ang) * this.speed;
+      this.active = true;
+
+      this.life = 0;
+      this.nextPoopAt = 0.18 + rng.next() * 0.25;
+    }
+
+    update(dt) {
+      if (!this.active) return;
+      this.life += dt;
+
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+
+      const m = 4;
+      if (this.x < -this.w - m || this.x > CANVAS_W + m || this.y < -this.h - m || this.y > CANVAS_H + m) {
+        this.active = false;
+      }
+    }
+
+    rect() { return { x:this.x, y:this.y, w:this.w, h:this.h }; }
+  }
+
+  class Poop {
+    constructor() {
+      this.active = false;
+      this.x = 0; this.y = 0;
+      this.spawnT = 0;
+      this.despawnAt = Infinity;
+      this.fadeStart = Infinity;
+      this.fadeSeconds = 0.6;
+    }
+
+    spawn(gx, gy, nowT) {
+      this.active = true;
+      this.x = gx; this.y = gy;
+      this.spawnT = nowT;
+      this.despawnAt = Infinity;
+      this.fadeStart = Infinity;
+    }
+
+    scheduleDespawn(afterSeconds, fadeSeconds, nowT) {
+      if (!this.active) return;
+      if (Number.isFinite(this.despawnAt) && this.despawnAt !== Infinity) return;
+      this.despawnAt = nowT + afterSeconds;
+      this.fadeSeconds = fadeSeconds;
+      this.fadeStart = this.despawnAt - fadeSeconds;
+    }
+
+    update(nowT) {
+      if (!this.active) return;
+      if (nowT >= this.despawnAt) this.active = false;
+    }
+
+    alpha(nowT) {
+      if (!this.active) return 0;
+      if (nowT < this.fadeStart) return 1;
+      const t = (nowT - this.fadeStart) / Math.max(0.0001, this.fadeSeconds);
+      return clamp(1 - t, 0, 1);
+    }
+  }
+
+  // =========================
+  // AI (BFS for mushrooms + avoid hazards; ALWAYS competitive)
+  // =========================
+  class SnakeAI {
+    decideDirection(state, snake, otherSnake) {
+      const target = this._chooseNearestMushroomBFS(state, snake, otherSnake);
+      let wanted = (target && target.firstDir) ? target.firstDir : null;
+      if (!wanted) wanted = this._chooseSafestMove(state, snake, otherSnake) || snake.dir;
+      if (OPP[wanted] === snake.dir) wanted = snake.dir;
+      snake.aiLastWanted = wanted;
+      return wanted;
+    }
+
+    _chooseNearestMushroomBFS(state, snake, otherSnake) {
+      const mushrooms = state.mushrooms;
+      if (!mushrooms.length) return null;
+
+      const start = snake.head();
+      const blocked = this._buildBlockedSet(state, snake, otherSnake);
+
+      const q = [];
+      const visited = new Set();
+      const parent = new Map();
+      const parentDir = new Map();
+
+      const sKey = key2(start.x, start.y);
+      q.push({ x:start.x, y:start.y });
+      visited.add(sKey);
+
+      const targetSet = new Set(mushrooms.map(m => key2(m.x, m.y)));
+      let foundKey = null;
+
+      while (q.length) {
+        const cur = q.shift();
+        const cKey = key2(cur.x, cur.y);
+
+        if (targetSet.has(cKey) && cKey !== sKey) { foundKey = cKey; break; }
+
+        for (const d of DIRS) {
+          const nx = cur.x + d.x;
+          const ny = cur.y + d.y;
+          if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
+
+          const nKey = key2(nx, ny);
+          if (visited.has(nKey)) continue;
+          if (blocked.has(nKey)) continue;
+
+          visited.add(nKey);
+          parent.set(nKey, cKey);
+          parentDir.set(nKey, d.name);
+          q.push({ x:nx, y:ny });
+        }
+      }
+
+      if (!foundKey) return null;
+
+      let k = foundKey;
+      let prev = parent.get(k);
+      while (prev && prev !== sKey) { k = prev; prev = parent.get(k); }
+      const firstDir = parentDir.get(k) || parentDir.get(foundKey);
+      if (!firstDir) return null;
+      if (OPP[firstDir] === snake.dir) return null;
+      return { firstDir };
+    }
+
+    _chooseSafestMove(state, snake, otherSnake) {
+      const candidates = [];
+      for (const d of DIRS) {
+        if (OPP[d.name] === snake.dir) continue;
+        if (!this._isMoveImmediatelySafe(state, snake, otherSnake, d.name)) continue;
+        const area = this._floodArea(state, snake, otherSnake, d.name, 8000);
+        candidates.push({ dir:d.name, area });
+      }
+      if (!candidates.length) return null;
+      candidates.sort((a, b) => b.area - a.area);
+      const bestArea = candidates[0].area;
+      const bestDirs = candidates.filter(c => c.area === bestArea).map(c => c.dir);
+      for (const d of DIRS) if (bestDirs.includes(d.name)) return d.name;
+      return candidates[0].dir;
+    }
+
+    _isMoveImmediatelySafe(state, snake, otherSnake, dirName) {
+      const d = DIR_BY_NAME.get(dirName);
+      const h = snake.head();
+      const nx = h.x + d.x;
+      const ny = h.y + d.y;
+      if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) return false;
+
+      const blocked = this._buildBlockedSet(state, snake, otherSnake);
+      return !blocked.has(key2(nx, ny));
+    }
+
+    _floodArea(state, snake, otherSnake, dirName, maxNodes) {
+      const d = DIR_BY_NAME.get(dirName);
+      const h = snake.head();
+      const sx = h.x + d.x;
+      const sy = h.y + d.y;
+      if (sx < 0 || sy < 0 || sx >= GRID_W || sy >= GRID_H) return 0;
+
+      const blocked = this._buildBlockedSet(state, snake, otherSnake);
+      const startKey = key2(sx, sy);
+      if (blocked.has(startKey)) return 0;
+
+      const q = [{ x:sx, y:sy }];
+      const visited = new Set([startKey]);
+      let count = 0;
+
+      while (q.length && count < maxNodes) {
+        const cur = q.shift();
+        count++;
+        for (const nd of DIRS) {
+          const nx = cur.x + nd.x;
+          const ny = cur.y + nd.y;
+          if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
+          const k = key2(nx, ny);
+          if (visited.has(k)) continue;
+          if (blocked.has(k)) continue;
+          visited.add(k);
+          q.push({ x:nx, y:ny });
+        }
+      }
+      return count;
+    }
+
+    _buildBlockedSet(state, snake, otherSnake) {
+      const blocked = new Set();
+
+      const canUseOwnTail = (snake.pendingGrowth === 0);
+      for (let i = 0; i < snake.body.length; i++) {
+        const s = snake.body[i];
+        const isTail = (i === snake.body.length - 1);
+        if (isTail && canUseOwnTail) continue;
+        blocked.add(key2(s.x, s.y));
+      }
+
+      const canUseOtherTail = (otherSnake.pendingGrowth === 0);
+      for (let i = 0; i < otherSnake.body.length; i++) {
+        const s = otherSnake.body[i];
+        const isTail = (i === otherSnake.body.length - 1);
+        if (isTail && canUseOtherTail) continue;
+        blocked.add(key2(s.x, s.y));
+      }
+
+      if (state.rita.active) {
+        const rr = state.rita.rect();
+        const minGX = clamp(Math.floor(rr.x / CELL) - 1, 0, GRID_W - 1);
+        const maxGX = clamp(Math.floor((rr.x + rr.w) / CELL) + 1, 0, GRID_W - 1);
+        const minGY = clamp(Math.floor(rr.y / CELL) - 1, 0, GRID_H - 1);
+        const maxGY = clamp(Math.floor((rr.y + rr.h) / CELL) + 1, 0, GRID_H - 1);
+
+        for (let gy = minGY; gy <= maxGY; gy++) {
+          for (let gx = minGX; gx <= maxGX; gx++) {
+            const cx = gx * CELL;
+            const cy = gy * CELL;
+            if (rectsIntersect(cx, cy, CELL, CELL, rr.x, rr.y, rr.w, rr.h)) {
+              blocked.add(key2(gx, gy));
+            }
+          }
+        }
+      }
+
+      return blocked;
+    }
+  }
+
+  // =========================
+  // GAME STATE + LOOP
+  // =========================
+  class Game {
+    constructor(canvas, ctx, assets, audio) {
+      this.canvas = canvas;
+      this.ctx = ctx;
+      this.assets = assets;
+      this.audio = audio;
+
+      this.state = "menu";
+      this.mode = "single_jay";
+      this.speedLevel = "high";
+
+      this.tickHz = 10;
+      this.tickDt = 1 / this.tickHz;
+      this.snakePxSpeed = this.tickHz * CELL;
+
+      this.acc = 0;
+      this.lastT = nowSec();
+
+      this.rng = new RNG((Date.now() ^ (Math.random() * 0xFFFFFFFF)) >>> 0);
+
+      this.mushrooms = [];
+      this.mushroomCount = MUSHROOM_COUNT_DEFAULT;
+
+      this.rita = new Rita();
+      this.ritaTimer = 0;
+
+      this.poops = [];
+      this.prevRitaActive = false;
+
+      this.ai = new SnakeAI();
+
+      this.jay = new Snake("jay", "J", assets.jay, "rgba(60,160,255,.95)", "rgba(5,20,40,.85)");
+      this.dani = new Snake("dani", "D", assets.dani, "rgba(255,150,60,.95)", "rgba(40,20,5,.85)");
+
+      this.jay.controls = { ArrowUp: "U", ArrowRight: "R", ArrowDown: "D", ArrowLeft: "L" };
+      this.dani.controls = { KeyW: "U", KeyD: "R", KeyS: "D", KeyA: "L" };
+
+      this.highJay = this._loadHigh(LS_KEY_JAY);
+      this.highDani = this._loadHigh(LS_KEY_DANI);
+
+      this.gameOverInfo = null;
+      this._bindVisibilityPause();
+    }
+
+    _loadHigh(key) {
+      const v = localStorage.getItem(key);
+      const n = v === null ? 0 : Number(v);
+      return Number.isFinite(n) ? n : 0;
+    }
+    _saveHigh() {
+      localStorage.setItem(LS_KEY_JAY, String(this.highJay));
+      localStorage.setItem(LS_KEY_DANI, String(this.highDani));
+    }
+
+    setMode(mode) { this.mode = mode; }
+    setSpeedLevel(level) { this.speedLevel = level; }
+
+    startGame() { this._resetWorld(); this.state = "running"; }
+    backToMenu() { this.state = "menu"; }
+    togglePause() { this.state = (this.state === "running") ? "paused" : (this.state === "paused") ? "running" : this.state; }
+    restart() { if (this.state === "menu") this.startGame(); else { this._resetWorld(); this.state = "running"; } }
+
+    _applySpeedKnob() {
+      const hz =
+        this.speedLevel === "super"  ? 14 :
+        this.speedLevel === "stoned" ? 7  :
+                                       10;
+      this.tickHz = hz;
+      this.tickDt = 1 / this.tickHz;
+      this.snakePxSpeed = this.tickHz * CELL;
+
+      // Rita always psycho: base half snake speed * 2.6
+      const psychoMult = 2.6;
+      const ritaSpeed = (this.snakePxSpeed * 0.5) * psychoMult;
+      this.rita.setSpeed(ritaSpeed);
+    }
+
+    _resetWorld() {
+      this.rng = new RNG((Date.now() ^ (Math.random() * 0xFFFFFFFF)) >>> 0);
+      this._applySpeedKnob();
+
+      const jayStart = [
+        { x: 10, y: 22 }, { x:  9, y: 22 }, { x:  8, y: 22 }, { x:  7, y: 22 },
+      ];
+      const daniStart = [
+        { x: 49, y: 22 }, { x: 50, y: 22 }, { x: 51, y: 22 }, { x: 52, y: 22 },
+      ];
+
+      this.jay.reset(jayStart, "R");
+      this.dani.reset(daniStart, "L");
+
+      if (this.mode === "single_jay") {
+        this.jay.isHuman = true;  this.dani.isHuman = false;
+      } else if (this.mode === "single_dani") {
+        this.jay.isHuman = false; this.dani.isHuman = true;
+      } else {
+        this.jay.isHuman = true;  this.dani.isHuman = true;
+      }
+
+      this.acc = 0;
+      this.lastT = nowSec();
+
+      this.mushrooms = [];
+      this._ensureMushrooms();
+
+      this.rita.active = false;
+      this.ritaTimer = 0;
+      this.prevRitaActive = false;
+
+      this.poops = [];
+      this.gameOverInfo = null;
+    }
+
+    _bindVisibilityPause() {
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && this.state === "running") this.state = "paused";
+      });
+    }
+
+    onKeyDown(e) {
+      this.audio.init();
+
+      if (e.code === "KeyP") { if (this.state === "running" || this.state === "paused") this.togglePause(); return; }
+      if (e.code === "KeyR") { this.restart(); return; }
+      if ((e.code === "Space" || e.code === "Enter") && this.state === "menu") { this.startGame(); return; }
+
+      if (this.state !== "running") return;
+
+      if (this.jay.isHuman && this.jay.controls[e.code]) this.jay.setDesiredDir(this.jay.controls[e.code]);
+      if (this.dani.isHuman && this.dani.controls[e.code]) this.dani.setDesiredDir(this.dani.controls[e.code]);
+    }
+
+    onPointerDown() { this.audio.init(); }
+
+    updateFrame() {
+      const t = nowSec();
+      let dt = t - this.lastT;
+      this.lastT = t;
+      dt = clamp(dt, 0, 0.25);
+
+      if (this.state === "running") {
+        this.ritaTimer += dt;
+        if (!this.rita.active && this.ritaTimer >= RITA_SPAWN_INTERVAL) {
+          this.ritaTimer = 0;
+          this.rita.spawn(this.rng);
+          this.audio.ritaSpawnSwell();
+        }
+
+        const wasActive = this.prevRitaActive;
+        const isActive = this.rita.active;
+        this.prevRitaActive = isActive;
+
+        if (isActive) {
+          this.rita.update(dt);
+
+          // GUARANTEED multiple poops: drop on a tight interval while she’s on-screen.
+          if (this.poops.length < MAX_ACTIVE_POOPS && this.rita.life >= this.rita.nextPoopAt) {
+            this._dropPoopTrail(); // NEW: always drops behind her
+            this.rita.nextPoopAt += POOP_DROP_BASE_INTERVAL_MIN + this.rng.next() * (POOP_DROP_BASE_INTERVAL_MAX - POOP_DROP_BASE_INTERVAL_MIN);
+          }
+        } else {
+          if (wasActive && !isActive && this.poops.length) {
+            const nowT = nowSec();
+            for (const p of this.poops) {
+              if (p.active) p.scheduleDespawn(POOP_LINGER_AFTER_RITA_LEAVES, POOP_DESPAWN_FADE, nowT);
+            }
+          }
+        }
+
+        this._updatePoops(nowSec());
+
+        this.acc += dt;
+        while (this.acc >= this.tickDt) {
+          this.acc -= this.tickDt;
+          this._tickSnakes();
+          if (this.state !== "running") break;
+        }
+      } else {
+        this._updatePoops(nowSec());
+      }
+
+      this.render();
+      requestAnimationFrame(() => this.updateFrame());
+    }
+
+    _updatePoops(nowT) {
+      if (!this.poops.length) return;
+      for (const p of this.poops) p.update(nowT);
+      this.poops = this.poops.filter(p => p.active);
+    }
+
+    // ====== FIXED POOP DROP: TRAIL BEHIND RITA ======
+    _dropPoopTrail() {
+      const nowT = nowSec();
+
+      // Direction unit of Rita motion
+      let vx = this.rita.vx, vy = this.rita.vy;
+      const mag = Math.hypot(vx, vy) || 1;
+      const ux = vx / mag, uy = vy / mag;
+
+      // Lateral unit (perpendicular)
+      const lx = -uy, ly = ux;
+
+      // Place poop behind her hitbox by N cells, with small sideways wobble
+      const back = (this.rita.w * 0.5) + (POOP_TRAIL_BACK_CELLS * CELL);
+      const side = (this.rng.int(-POOP_TRAIL_SIDE_CELLS, POOP_TRAIL_SIDE_CELLS)) * CELL;
+
+      const cx = this.rita.x + this.rita.w * 0.5;
+      const cy = this.rita.y + this.rita.h * 0.5;
+
+      const px = cx - ux * back + lx * side;
+      const py = cy - uy * back + ly * side;
+
+      const gx = clamp(Math.floor(px / CELL), 0, GRID_W - 1);
+      const gy = clamp(Math.floor(py / CELL), 0, GRID_H - 1);
+
+      // If cell is occupied, try a couple nearby (still behind her)
+      const tries = [
+        { x:gx, y:gy },
+        { x:clamp(gx + 1, 0, GRID_W - 1), y:gy },
+        { x:clamp(gx - 1, 0, GRID_W - 1), y:gy },
+        { x:gx, y:clamp(gy + 1, 0, GRID_H - 1) },
+        { x:gx, y:clamp(gy - 1, 0, GRID_H - 1) },
+      ];
+
+      const occ = this._occupiedCellsSet(true);
+      for (const c of tries) {
+        const k = key2(c.x, c.y);
+        if (occ.has(k)) continue;
+
+        // Don’t put poop inside Rita’s hitbox (should be rare now, but keep it safe)
+        if (this._cellIntersectsRita(c.x, c.y)) continue;
+
+        const p = new Poop();
+        p.spawn(c.x, c.y, nowT);
+        this.poops.push(p);
+        this.audio.fart();
+        return;
+      }
+      // If all occupied, skip this drop (next interval will try again)
+    }
+
+    _tickSnakes() {
+      if (!this.jay.isHuman) {
+        const d = this.ai.decideDirection(this, this.jay, this.dani);
+        this.jay.setDesiredDir(d);
+      }
+      if (!this.dani.isHuman) {
+        const d = this.ai.decideDirection(this, this.dani, this.jay);
+        this.dani.setDesiredDir(d);
+      }
+
+      this.jay.lockInDirection();
+      this.dani.lockInDirection();
+
+      const jNext = this.jay.computeNextBody();
+      const dNext = this.dani.computeNextBody();
+
+      const jH = jNext.newHead;
+      const dH = dNext.newHead;
+
+      let crashedJay = false;
+      let crashedDani = false;
+
+      if (jH.x < 0 || jH.y < 0 || jH.x >= GRID_W || jH.y >= GRID_H) crashedJay = true;
+      if (dH.x < 0 || dH.y < 0 || dH.x >= GRID_W || dH.y >= GRID_H) crashedDani = true;
+
+      if (!crashedJay && this._headHitsBody(jNext.nextBody)) crashedJay = true;
+      if (!crashedDani && this._headHitsBody(dNext.nextBody)) crashedDani = true;
+
+      const jSet = new Set(jNext.nextBody.map(s => key2(s.x, s.y)));
+      const dSet = new Set(dNext.nextBody.map(s => key2(s.x, s.y)));
+
+      const headKeyJ = key2(jH.x, jH.y);
+      const headKeyD = key2(dH.x, dH.y);
+
+      if (headKeyJ === headKeyD) { crashedJay = true; crashedDani = true; }
+      if (!crashedJay && dSet.has(headKeyJ)) crashedJay = true;
+      if (!crashedDani && jSet.has(headKeyD)) crashedDani = true;
+
+      if (this._snakeHitsRita(jNext.nextBody)) crashedJay = true;
+      if (this._snakeHitsRita(dNext.nextBody)) crashedDani = true;
+
+      if (crashedJay || crashedDani) {
+        let winner = "draw";
+        if (crashedJay && !crashedDani) winner = "dani";
+        else if (crashedDani && !crashedJay) winner = "jay";
+        this._gameOver({ winner, crashed:{ jay:crashedJay, dani:crashedDani } });
+        return;
+      }
+
+      this.jay.commitNext(jNext.nextBody, jNext.willGrow);
+      this.dani.commitNext(dNext.nextBody, dNext.willGrow);
+
+      if (this._handlePoopHits()) return;
+
+      this._handleMushroomEats();
+      this._ensureMushrooms();
+    }
+
+    _handlePoopHits() {
+      if (!this.poops.length) return false;
+
+      const jH = this.jay.head();
+      const dH = this.dani.head();
+      const jKey = key2(jH.x, jH.y);
+      const dKey = key2(dH.x, dH.y);
+
+      let hitJay = false;
+      let hitDani = false;
+
+      const remaining = [];
+      for (const p of this.poops) {
+        if (!p.active) continue;
+        const pk = key2(p.x, p.y);
+        const eatenByJ = (pk === jKey);
+        const eatenByD = (pk === dKey);
+
+        if (eatenByJ) hitJay = true;
+        if (eatenByD) hitDani = true;
+
+        if (!eatenByJ && !eatenByD) remaining.push(p);
+        else p.active = false;
+      }
+      this.poops = remaining;
+
+      if (!hitJay && !hitDani) return false;
+
+      let crashedJay = false;
+      let crashedDani = false;
+
+      if (hitJay) { if (!this.jay.shrinkByOne()) crashedJay = true; }
+      if (hitDani) { if (!this.dani.shrinkByOne()) crashedDani = true; }
+
+      if (crashedJay || crashedDani) {
+        let winner = "draw";
+        if (crashedJay && !crashedDani) winner = "dani";
+        else if (crashedDani && !crashedJay) winner = "jay";
+        this._gameOver({ winner, crashed:{ jay:crashedJay, dani:crashedDani } });
+        return true;
+      }
+
+      return false;
+    }
+
+    _headHitsBody(body) {
+      const head = body[0];
+      const hk = key2(head.x, head.y);
+      for (let i = 1; i < body.length; i++) {
+        if (key2(body[i].x, body[i].y) === hk) return true;
+      }
+      return false;
+    }
+
+    _snakeHitsRita(body) {
+      if (!this.rita.active) return false;
+      const rr = this.rita.rect();
+      for (const seg of body) {
+        const sx = seg.x * CELL;
+        const sy = seg.y * CELL;
+        if (rectsIntersect(sx, sy, CELL, CELL, rr.x, rr.y, rr.w, rr.h)) return true;
+      }
+      return false;
+    }
+
+    _handleMushroomEats() {
+      if (!this.mushrooms.length) return;
+
+      const jH = this.jay.head();
+      const dH = this.dani.head();
+      const jKey = key2(jH.x, jH.y);
+      const dKey = key2(dH.x, dH.y);
+
+      let ateAny = false;
+      const remaining = [];
+
+      for (const m of this.mushrooms) {
+        const mk = key2(m.x, m.y);
+        const eatenByJ = (mk === jKey);
+        const eatenByD = (mk === dKey);
+
+        if (eatenByJ) { this.jay.score += 1; this.jay.pendingGrowth += 1; ateAny = true; }
+        if (eatenByD) { this.dani.score += 1; this.dani.pendingGrowth += 1; ateAny = true; }
+
+        if (!eatenByJ && !eatenByD) remaining.push(m);
+      }
+
+      if (ateAny) this.audio.pickupBlip();
+      this.mushrooms = remaining;
+    }
+
+    _ensureMushrooms() {
+      while (this.mushrooms.length < this.mushroomCount) {
+        const cell = this._randomEmptyCell();
+        if (!cell) break;
+        this.mushrooms.push(cell);
+      }
+    }
+
+    _randomEmptyCell() {
+      const occupied = this._occupiedCellsSet(true);
+      const maxTries = 500;
+
+      for (let i = 0; i < maxTries; i++) {
+        const x = this.rng.int(0, GRID_W - 1);
+        const y = this.rng.int(0, GRID_H - 1);
+        const k = key2(x, y);
+        if (occupied.has(k)) continue;
+        if (this._cellIntersectsRita(x, y)) continue;
+        return { x, y };
+      }
+
+      for (let y = 0; y < GRID_H; y++) {
+        for (let x = 0; x < GRID_W; x++) {
+          const k = key2(x, y);
+          if (occupied.has(k)) continue;
+          if (this._cellIntersectsRita(x, y)) continue;
+          return { x, y };
+        }
+      }
+      return null;
+    }
+
+    _occupiedCellsSet(includePoops) {
+      const s = new Set();
+      for (const seg of this.jay.body) s.add(key2(seg.x, seg.y));
+      for (const seg of this.dani.body) s.add(key2(seg.x, seg.y));
+      for (const m of this.mushrooms) s.add(key2(m.x, m.y));
+      if (includePoops) for (const p of this.poops) if (p.active) s.add(key2(p.x, p.y));
+      return s;
+    }
+
+    _cellIntersectsRita(gx, gy) {
+      if (!this.rita.active) return false;
+      const rr = this.rita.rect();
+      const cx = gx * CELL;
+      const cy = gy * CELL;
+      return rectsIntersect(cx, cy, CELL, CELL, rr.x, rr.y, rr.w, rr.h);
+    }
+
+    _gameOver(info) {
+      this.state = "gameover";
+      this.gameOverInfo = info;
+
+      if (this.jay.score > this.highJay) this.highJay = this.jay.score;
+      if (this.dani.score > this.highDani) this.highDani = this.dani.score;
+      this._saveHigh();
+
+      updateGameOverUI(this);
+      showGameOverOverlay(true);
+    }
+
+    // =========================
+    // RENDERING
+    // =========================
+    render() {
+      const ctx = this.ctx;
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      if (this.assets.map.ok) {
+        ctx.globalAlpha = 1;
+        ctx.drawImage(this.assets.map.img, 0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "rgba(0,0,0,0.18)";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      } else {
+        ctx.fillStyle = "#12323a";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "rgba(255,255,255,0.03)";
+        for (let y = 0; y < CANVAS_H; y += 60) ctx.fillRect(0, y, CANVAS_W, 1);
+        for (let x = 0; x < CANVAS_W; x += 60) ctx.fillRect(x, 0, 1, CANVAS_H);
+      }
+
+      this._drawMushrooms(ctx);
+      this._drawRita(ctx);
+      this._drawPoops(ctx);
+      this._drawSnake(ctx, this.jay);
+      this._drawSnake(ctx, this.dani);
+      this._drawHUD(ctx);
+
+      if (this.state === "paused") {
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.font = "700 44px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText("PAUSED", CANVAS_W / 2, CANVAS_H / 2 - 10);
+        ctx.font = "500 16px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.8)";
+        ctx.fillText("Press P to resume", CANVAS_W / 2, CANVAS_H / 2 + 34);
+      }
+    }
+
+    _drawHUD(ctx) {
+      const pad = 12;
+      const boxW = 520;
+      const boxH = 78;
+
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.35)";
+      ctx.fillRect(pad, pad, boxW, boxH);
+
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.font = "700 18px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.textAlign = "left";
+      ctx.textBaseline = "top";
+      ctx.fillText("Scores", pad + 10, pad + 8);
+
+      ctx.font = "600 14px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      ctx.fillStyle = "rgba(255,255,255,0.85)";
+      ctx.fillText(`Jay: ${this.jay.score} (High: ${this.highJay})`, pad + 10, pad + 34);
+      ctx.fillText(`Dani: ${this.dani.score} (High: ${this.highDani})`, pad + 10, pad + 52);
+
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(255,255,255,0.70)";
+      ctx.font = "500 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+      const modeName =
+        this.mode === "two_player" ? "Two Player" :
+        this.mode === "single_jay" ? "Single (Jay)" : "Single (Dani)";
+      const speedName = (this.speedLevel === "super") ? "Super High" : (this.speedLevel === "stoned") ? "Stoned" : "High";
+      ctx.fillText(`${modeName} • Speed: ${speedName} • Rita: Psycho`, pad + boxW - 10, pad + 34);
+      ctx.fillText(`P pause • R restart`, pad + boxW - 10, pad + 52);
+
+      ctx.restore();
+    }
+
+    _drawMushrooms(ctx) {
+      ctx.save();
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.font = "18px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+
+      for (const m of this.mushrooms) {
+        const px = m.x * CELL;
+        const py = m.y * CELL;
+
+        ctx.fillStyle = "rgba(0,0,0,0.20)";
+        ctx.beginPath();
+        ctx.roundRect(px + 2, py + 2, CELL - 4, CELL - 4, 6);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255,255,255,0.98)";
+        ctx.fillText("🍄", px + CELL / 2, py + CELL / 2 + 1);
+      }
+      ctx.restore();
+    }
+
+    _drawRita(ctx) {
+      if (!this.rita.active) return;
+      const rr = this.rita.rect();
+
+      ctx.save();
+      ctx.globalAlpha = 0.95;
+
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.fillRect(rr.x, rr.y, rr.w, rr.h);
+
+      ctx.strokeStyle = "rgba(0,0,0,0.25)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rr.x + 1, rr.y + 1, rr.w - 2, rr.h - 2);
+
+      ctx.shadowColor = "rgba(255,255,255,0.35)";
+      ctx.shadowBlur = 12;
+      ctx.strokeStyle = "rgba(255,255,255,0.35)";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(rr.x + 2, rr.y + 2, rr.w - 4, rr.h - 4);
+
+      ctx.restore();
+    }
+
+    _drawPoops(ctx) {
+      if (!this.poops.length) return;
+      const t = nowSec();
+
+      for (const p of this.poops) {
+        if (!p.active) continue;
+        const a = p.alpha(t);
+        if (a <= 0) continue;
+
+        const px = p.x * CELL;
+        const py = p.y * CELL;
+
+        ctx.save();
+        ctx.globalAlpha = 0.95 * a;
+
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.beginPath();
+        ctx.ellipse(px + CELL/2, py + CELL/2 + 6, 7.5, 4.0, 0, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.font = "18px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(255,255,255,0.98)";
+        ctx.fillText("💩", px + CELL/2, py + CELL/2 + 1);
+
+        ctx.restore();
+      }
+    }
+
+    _drawSnake(ctx, snake) {
+      if (!snake.body || snake.body.length === 0) return;
+      ctx.save();
+
+      for (let i = snake.body.length - 1; i >= 0; i--) {
+        const seg = snake.body[i];
+        const x = seg.x * CELL;
+        const y = seg.y * CELL;
+
+        const isHead = (i === 0);
+        if (!isHead) {
+          ctx.fillStyle = snake.colorBody;
+          ctx.strokeStyle = snake.colorOutline;
+          ctx.lineWidth = 2;
+
+          const pad = 2;
+          ctx.beginPath();
+          ctx.roundRect(x + pad, y + pad, CELL - pad*2, CELL - pad*2, 6);
+          ctx.fill();
+          ctx.stroke();
+        }
+      }
+
+      const h = snake.head();
+      const hx = h.x * CELL;
+      const hy = h.y * CELL;
+
+      const headPad = 1.5;
+      const headSize = CELL - headPad * 2;
+
+      ctx.fillStyle = snake.colorBody;
+      ctx.strokeStyle = snake.colorOutline;
+      ctx.lineWidth = 2;
+
+      ctx.beginPath();
+      ctx.roundRect(hx + headPad, hy + headPad, headSize, headSize, 8);
+      ctx.fill();
+      ctx.stroke();
+
+      if (snake.headImgRef && snake.headImgRef.ok && snake.headImgRef.img) {
+        const img = snake.headImgRef.img;
+        const inset = 2.5;
+        const iw = CELL - inset*2;
+        const ih = CELL - inset*2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(hx + inset, hy + inset, iw, ih, 6);
+        ctx.clip();
+        // For Dani, crop ~20% off the top so sunglasses + mouth are centred in frame
+        if (snake.id === "dani") {
+          const nw = img.naturalWidth  || img.width  || 200;
+          const nh = img.naturalHeight || img.height || 200;
+          const cropTop = nh * 0.20;
+          ctx.drawImage(img, 0, cropTop, nw, nh - cropTop, hx + inset, hy + inset, iw, ih);
+        } else {
+          ctx.drawImage(img, hx + inset, hy + inset, iw, ih);
+        }
+        ctx.restore();
+      } else {
+        ctx.fillStyle = "rgba(0,0,0,0.25)";
+        ctx.beginPath();
+        ctx.arc(hx + CELL/2, hy + CELL/2, 7.5, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.font = "800 12px system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.fillText(snake.label, hx + CELL/2, hy + CELL/2 + 0.5);
+      }
+
+      ctx.restore();
+    }
+  }
+
+  // Canvas roundRect polyfill
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      const rr = (typeof r === "number") ? { tl:r, tr:r, br:r, bl:r } : r;
+      this.beginPath();
+      this.moveTo(x + rr.tl, y);
+      this.lineTo(x + w - rr.tr, y);
+      this.quadraticCurveTo(x + w, y, x + w, y + rr.tr);
+      this.lineTo(x + w, y + h - rr.br);
+      this.quadraticCurveTo(x + w, y + h, x + w - rr.br, y + h);
+      this.lineTo(x + rr.bl, y + h);
+      this.quadraticCurveTo(x, y + h, x, y + h - rr.bl);
+      this.lineTo(x, y + rr.tl);
+      this.quadraticCurveTo(x, y, x + rr.tl, y);
+      this.closePath();
+      return this;
+    };
+  }
+
+  // =========================
+  // DOM WIRES
+  // =========================
+  const canvas = document.getElementById("game");
+  const ctx = canvas.getContext("2d", { alpha:false });
+
+  const menuOverlay = document.getElementById("menuOverlay");
+  const menuStart = document.getElementById("menuStart");
+  const menuHow = document.getElementById("menuHow");
+  const menuHint = document.getElementById("menuHint");
+  const speedSelect = document.getElementById("speedLevel");
+
+  const gameOverOverlay = document.getElementById("gameOverOverlay");
+  const restartBtn = document.getElementById("restartBtn");
+  const goMenu = document.getElementById("goMenu");
+  const winnerLine = document.getElementById("winnerLine");
+  const jayScoreEnd = document.getElementById("jayScoreEnd");
+  const daniScoreEnd = document.getElementById("daniScoreEnd");
+  const jayHighEnd = document.getElementById("jayHighEnd");
+  const daniHighEnd = document.getElementById("daniHighEnd");
+
+  function getSelectedMode() {
+    const el = document.querySelector('input[name="mode"]:checked');
+    return el ? el.value : "single_jay";
+  }
+  function showMenuOverlay(on) { menuOverlay.classList.toggle("hidden", !on); }
+  function showGameOverOverlay(on) { gameOverOverlay.classList.toggle("hidden", !on); }
+
+  function updateGameOverUI(game) {
+    const j = game.jay.score;
+    const d = game.dani.score;
+
+    let label;
+    if (game.gameOverInfo && game.gameOverInfo.winner) {
+      const w = game.gameOverInfo.winner;
+      if (w === "draw") label = "Result: Draw (both crashed)";
+      else if (w === "jay") label = "Winner: Jay (Dani crashed)";
+      else label = "Winner: Dani (Jay crashed)";
+    } else {
+      const w = (j > d) ? "Jay" : (d > j) ? "Dani" : "Draw";
+      label = (w === "Draw") ? "Result: Draw" : `Winner: ${w}`;
+    }
+
+    winnerLine.textContent = label;
+    jayScoreEnd.textContent = String(j);
+    daniScoreEnd.textContent = String(d);
+    jayHighEnd.textContent = String(game.highJay);
+    daniHighEnd.textContent = String(game.highDani);
+  }
+
+  // =========================
+  // BOOTSTRAP
+  // =========================
+  (async function boot() {
+    const audio = new AudioSystem();
+
+    const [map, jay, dani] = await Promise.all([
+      loadOptionalImage("margit-map.jpg"),
+      loadOptionalImage("jay.jpg"),
+      loadOptionalImage("dani.jpg"),
+    ]);
+
+    const assets = { map, jay, dani };
+    const game = new Game(canvas, ctx, assets, audio);
+
+    game.setSpeedLevel(speedSelect.value);
+
+    showMenuOverlay(true);
+    showGameOverOverlay(false);
+
+    speedSelect.addEventListener("change", () => game.setSpeedLevel(speedSelect.value));
+
+    menuStart.addEventListener("click", () => {
+      audio.init();
+      game.setMode(getSelectedMode());
+      game.setSpeedLevel(speedSelect.value);
+      showMenuOverlay(false);
+      showGameOverOverlay(false);
+      game.startGame();
+    });
+
+    menuHow.addEventListener("click", () => {
+      menuHint.textContent = "Choose mode + speed, then Space/Enter or Start. P pauses. R restarts.";
+      setTimeout(() => {
+        menuHint.textContent = "Tip: Click the game once or press any key to enable audio.";
+      }, 4500);
+    });
+
+    document.getElementById("modeList").addEventListener("change", () => {
+      game.setMode(getSelectedMode());
+    });
+
+    restartBtn.addEventListener("click", () => {
+      audio.init();
+      showGameOverOverlay(false);
+      showMenuOverlay(false);
+      game.restart();
+    });
+
+    goMenu.addEventListener("click", () => {
+      showGameOverOverlay(false);
+      showMenuOverlay(true);
+      game.backToMenu();
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"].includes(e.code)) e.preventDefault();
+
+      if (game.state === "menu" && (e.code === "Space" || e.code === "Enter")) {
+        audio.init();
+        game.setMode(getSelectedMode());
+        game.setSpeedLevel(speedSelect.value);
+        showMenuOverlay(false);
+        showGameOverOverlay(false);
+        game.startGame();
+        return;
+      }
+
+      if (game.state === "gameover" && (e.code === "KeyR")) {
+        audio.init();
+        showGameOverOverlay(false);
+        showMenuOverlay(false);
+        game.restart();
+        return;
+      }
+
+      game.onKeyDown(e);
+    }, { passive:false });
+
+    canvas.addEventListener("pointerdown", () => {
+      audio.init();
+      game.onPointerDown();
+      if (game.state === "menu") {
+        game.setMode(getSelectedMode());
+        game.setSpeedLevel(speedSelect.value);
+        showMenuOverlay(false);
+        showGameOverOverlay(false);
+        game.startGame();
+      }
+    });
+
+    const syncOverlays = () => {
+      if (game.state === "menu") {
+        showMenuOverlay(true);
+        showGameOverOverlay(false);
+      } else if (game.state === "gameover") {
+        showMenuOverlay(false);
+        showGameOverOverlay(true);
+      } else {
+        showMenuOverlay(false);
+        if (game.state !== "gameover") showGameOverOverlay(false);
+      }
+      requestAnimationFrame(syncOverlays);
+    };
+    syncOverlays();
+
+    game.updateFrame();
+  })();
+
+  // ── Mobile full-screen fill ──────────────────────────────────────────────
+  // Use style.setProperty(prop, val, 'important') — the only way to set
+  // inline !important via CSSOM, which beats any stylesheet !important rule.
+  (function mobileFill() {
+    const stage   = document.querySelector('.stage');
+    const cvs     = document.getElementById('game');
+    const hudHelp = document.querySelector('.hudHelp');
+
+    function setImp(el, prop, val) {
+      el.style.setProperty(prop, val, 'important');
+    }
+
+    function apply() {
+      // Use visualViewport when available (correct on iOS Safari with toolbar)
+      const vv = window.visualViewport;
+      const w  = vv ? Math.round(vv.width)  : window.innerWidth;
+      const h  = vv ? Math.round(vv.height) : window.innerHeight;
+
+      if (w > 900) {
+        // Desktop — strip all overrides so CSS defaults take back over
+        ['position','top','left','width','height','border-radius','box-shadow','overflow'].forEach(
+          p => stage.style.removeProperty(p)
+        );
+        cvs.style.removeProperty('width');
+        cvs.style.removeProperty('height');
+        if (hudHelp) hudHelp.style.removeProperty('display');
+        return;
+      }
+
+      // Mobile: pin stage to full visual viewport
+      setImp(stage, 'position',      'fixed');
+      setImp(stage, 'top',           '0px');
+      setImp(stage, 'left',          '0px');
+      setImp(stage, 'width',         w + 'px');
+      setImp(stage, 'height',        h + 'px');
+      setImp(stage, 'border-radius', '0px');
+      setImp(stage, 'box-shadow',    'none');
+      setImp(stage, 'overflow',      'hidden');
+
+      // Canvas fills the stage
+      setImp(cvs, 'display', 'block');
+      setImp(cvs, 'width',   w + 'px');
+      setImp(cvs, 'height',  h + 'px');
+
+      if (hudHelp) setImp(hudHelp, 'display', 'none');
+    }
+
+    apply();
+    window.addEventListener('resize', apply);
+    // visualViewport resize covers iOS toolbar show/hide
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', apply);
+    }
+    // orientationchange fires before dimensions update — wait for it to settle
+    window.addEventListener('orientationchange', function() { setTimeout(apply, 150); });
+  })();
+})();
+</script>
+</body>
+</html>

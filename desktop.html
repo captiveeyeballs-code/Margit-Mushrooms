@@ -1,0 +1,1721 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Margit Mushroom Adventures! 🐍 — Desktop</title>
+  <style>
+    :root { --w:1200px; --h:900px; --text:#eef2ff; --muted:#a9b1d6; }
+    *, *::before, *::after { box-sizing: border-box; }
+    html, body {
+      height: 100%; margin: 0; overflow: hidden;
+      background: #050812; color: var(--text);
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    }
+    .wrap {
+      position: relative;
+      width: 100vw; height: 100vh;
+      overflow: hidden;
+    }
+    .stage {
+      position: absolute;
+      width: var(--w); height: var(--h);
+      top: 0; left: 0;
+      box-shadow: 0 20px 80px rgba(0,0,0,.7);
+      border-radius: 14px; overflow: hidden;
+      transform-origin: top left;
+    }
+    canvas { display: block; width: var(--w); height: var(--h); background: #0f1a1a; }
+
+    .hudHelp {
+      position: absolute; left: 14px; bottom: 10px;
+      font-size: 12px; color: rgba(255,255,255,.6);
+      text-shadow: 0 1px 2px rgba(0,0,0,.8); user-select: none;
+      pointer-events: none;
+    }
+
+    .rita-alert {
+      display: none;
+      position: absolute; top: 25%; left: 0; right: 0;
+      text-align: center; font-size: 32px; font-weight: 900;
+      color: #ff3030;
+      background: rgba(0,0,0,0.55);
+      padding: 12px 0;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 20px #ff0000, 0 2px 8px rgba(0,0,0,1);
+      pointer-events: none; z-index: 20;
+      animation: ritaPulse 0.45s ease-in-out infinite alternate;
+    }
+    .rita-alert.visible { display: block; }
+    @keyframes ritaPulse {
+      from { opacity: 1;   transform: scale(1); }
+      to   { opacity: 0.6; transform: scale(1.04); }
+    }
+
+    /* Overlays */
+    .overlay {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: linear-gradient(180deg, rgba(5,8,18,.80), rgba(5,8,18,.94));
+      padding: 20px;
+    }
+    .overlay.hidden { display: none; }
+    .card {
+      width: min(820px, 94%);
+      background: linear-gradient(180deg, rgba(18,26,60,.94), rgba(11,16,34,.94));
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 18px;
+      padding: 20px 20px 18px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .title { font-size: 24px; font-weight: 800; margin: 0 0 6px; letter-spacing: -.3px; }
+    .sub { margin: 0 0 14px; color: var(--muted); line-height: 1.4; font-size: 13px; }
+    .intro { margin: 0 0 14px; color: #ddd; line-height: 1.55; font-size: 13px; }
+    .controls-grid { display: flex; gap: 12px; margin-bottom: 10px; }
+    .player-keys { flex: 1; background: rgba(255,255,255,.07); border-radius: 8px; padding: 8px 10px; font-size: 13px; }
+    .player-keys strong { display: block; margin-bottom: 4px; color: #aef; }
+    .player-keys span { color: #ddd; }
+    .row { display: flex; gap: 14px; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; }
+    .modeBox { flex: 1 1 460px; }
+    .controlsBox {
+      flex: 1 1 260px;
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px; padding: 12px;
+    }
+    .controlsBox h3 { margin: 0 0 8px; font-size: 14px; color: rgba(255,255,255,.9); }
+    .controlsBox ul { margin: 0; padding-left: 16px; color: rgba(255,255,255,.78); font-size: 12.5px; line-height: 1.55; }
+    .modes { display: grid; gap: 9px; margin: 8px 0 12px; }
+    .mode {
+      display: flex; gap: 10px; align-items: flex-start;
+      background: rgba(255,255,255,.04);
+      border: 1.5px solid rgba(255,255,255,.10);
+      border-radius: 14px; padding: 10px 12px;
+      cursor: pointer; user-select: none; transition: border-color .15s;
+    }
+    .mode:hover { border-color: rgba(255,255,255,.2); }
+    .mode input { margin-top: 3px; accent-color: #4d7aff; }
+    .mode strong { display: block; font-size: 13.5px; }
+    .mode span { display: block; font-size: 12px; color: rgba(255,255,255,.65); margin-top: 2px; }
+    .tweaks {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 8px 0 14px;
+    }
+    .tweak {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px; padding: 10px 12px;
+    }
+    .tweak label { display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px; color: rgba(255,255,255,.92); }
+    .tweak select {
+      width: 100%; background: rgba(0,0,0,.28);
+      border: 1px solid rgba(255,255,255,.14); border-radius: 10px;
+      color: rgba(255,255,255,.92); padding: 9px 10px; font-size: 13px; outline: none;
+    }
+    .tweak small { display: block; margin-top: 6px; color: rgba(255,255,255,.65); font-size: 11.5px; line-height: 1.35; }
+    .actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    button {
+      appearance: none; border: 0; cursor: pointer;
+      padding: 11px 18px; border-radius: 12px; color: var(--text);
+      background: #2d4cff; font-weight: 700; font-size: 14px; letter-spacing: .2px;
+      box-shadow: 0 8px 24px rgba(45,76,255,.3); transition: opacity .12s, transform .1s;
+    }
+    button:hover { opacity: .9; }
+    button:active { transform: scale(.97); }
+    button.secondary {
+      background: rgba(255,255,255,.10);
+      box-shadow: none; border: 1px solid rgba(255,255,255,.15);
+      color: rgba(255,255,255,.92);
+    }
+    .hint { margin-top: 10px; font-size: 12px; color: rgba(255,255,255,.62); }
+    .winnerLine { font-size: 17px; margin: 8px 0 12px; font-weight: 600; }
+    .scoreGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0 16px; }
+    .pill {
+      background: rgba(255,255,255,.04);
+      border: 1px solid rgba(255,255,255,.10);
+      border-radius: 14px; padding: 12px 14px;
+    }
+    .pill b { display: block; font-size: 14px; margin-bottom: 4px; }
+    .pill div { font-size: 12.5px; color: rgba(255,255,255,.78); line-height: 1.4; }
+  </style>
+</head>
+<body>
+<div class="wrap" id="wrap">
+  <div class="stage" id="stage">
+    <canvas id="game" width="1200" height="900"></canvas>
+
+    <div class="hudHelp" id="hudHelp">Arrow keys (Jay) · WASD (Dani) · P pause · R restart</div>
+    <div id="ritaAlert" class="rita-alert">🚨 Rita is looking for us!! 🚨</div>
+
+    <!-- MENU OVERLAY -->
+    <div id="menuOverlay" class="overlay">
+      <div class="card">
+        <h1 class="title">🐍 Margit Mushroom Adventures!</h1>
+        <p class="intro">Jay and Dani are up to mischief on the Margit Island, looking for mushrooms to eat! Rita isn't happy about it and — like she always does — is talking shit about them to everyone, while trying to put a stop to their adventures. Eat as many mushrooms as you can, but don't get too high or you will slow down and Rita will catch you! Last player standing wins!</p>
+
+        <div class="row">
+          <div class="modeBox">
+            <div class="modes" id="modeList">
+              <label class="mode">
+                <input type="radio" name="mode" value="single_jay" checked />
+                <div>
+                  <strong>Jay (you) vs Dani (AI)</strong>
+                  <span>Arrow keys · Dani is a competitive AI that always chases mushrooms.</span>
+                </div>
+              </label>
+              <label class="mode">
+                <input type="radio" name="mode" value="single_dani" />
+                <div>
+                  <strong>Dani (you) vs Jay (AI)</strong>
+                  <span>WASD keys · Jay is a competitive AI that always chases mushrooms.</span>
+                </div>
+              </label>
+              <label class="mode">
+                <input type="radio" name="mode" value="two_player" />
+                <div>
+                  <strong>Two Player: Jay + Dani</strong>
+                  <span>Both human · Arrow vs WASD · Swipe on mobile controls Jay.</span>
+                </div>
+              </label>
+            </div>
+
+            <div class="tweaks">
+              <div class="tweak">
+                <label for="speedLevel">How High Are You?</label>
+                <select id="speedLevel">
+                  <option value="stoned">Stoned (slow)</option>
+                  <option value="high" selected>High (medium)</option>
+                  <option value="super">Super High (fast)</option>
+                </select>
+                <small>Changes snake speed only. AI is always competitive.</small>
+              </div>
+              <div class="tweak">
+                <label>Rita</label>
+                <select disabled><option selected>Psycho (always)</option></select>
+                <small>Rita is always fast and drops multiple 💩 per pass.</small>
+              </div>
+            </div>
+          </div>
+
+          <div class="controlsBox">
+            <h3>How to Play</h3>
+            <div class="controls-grid">
+              <div class="player-keys">
+                <strong>Jay</strong>
+                <span>⬆ ⬇ ⬅ ➡ Arrow keys</span>
+              </div>
+              <div class="player-keys">
+                <strong>Dani</strong>
+                <span>W A S D keys</span>
+              </div>
+            </div>
+            <ul>
+              <li>🍄 Eat mushrooms to score &amp; grow</li>
+              <li>The longer you get, the slower you move</li>
+              <li>Crash into a wall, yourself, or the other snake = out</li>
+              <li>💩 Hit Rita's poop = lose a segment</li>
+              <li>😱 Hit Rita = game over for that snake</li>
+              <li>Last player standing wins!</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="menuHow">How to Start</button>
+          <button id="menuStart">▶ Start Game</button>
+        </div>
+        <div class="hint" id="menuHint">Tap/click the game or press Space/Enter to start.</div>
+      </div>
+    </div>
+
+    <!-- GAME OVER OVERLAY -->
+    <div id="gameOverOverlay" class="overlay hidden">
+      <div class="card">
+        <h1 class="title">Game Over 💥</h1>
+        <div class="winnerLine" id="winnerLine">Winner: —</div>
+
+        <div class="scoreGrid">
+          <div class="pill">
+            <b>Jay 🐍</b>
+            <div>Score: <span id="jayScoreEnd">0</span></div>
+            <div>Best: <span id="jayHighEnd">0</span></div>
+          </div>
+          <div class="pill">
+            <b>Dani 🐍</b>
+            <div>Score: <span id="daniScoreEnd">0</span></div>
+            <div>Best: <span id="daniHighEnd">0</span></div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button class="secondary" id="goMenu">← Menu</button>
+          <button id="restartBtn">↺ Restart (R)</button>
+        </div>
+        <div class="hint">R to restart quickly · P to pause mid-game</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // =====================================================================
+  // CONFIG
+  // =====================================================================
+  const CANVAS_W = 1200;
+  const CANVAS_H = 900;
+  const CELL = 20;
+  const GRID_W = CANVAS_W / CELL; // 60
+  const GRID_H = CANVAS_H / CELL; // 45
+
+  const RITA_SPAWN_INTERVAL = 15.0;
+  const MUSHROOM_COUNT_DEFAULT = 2;  // 2 mushrooms on screen at once
+
+  const POOP_LINGER_AFTER_RITA_LEAVES = 5.0;
+  const POOP_DESPAWN_FADE = 0.8;
+  const MAX_ACTIVE_POOPS = 150;
+
+  const POOP_DROP_BASE_INTERVAL_MIN = 0.15;
+  const POOP_DROP_BASE_INTERVAL_MAX = 0.28;
+  const POOP_TRAIL_BACK_CELLS = 2;
+  const POOP_TRAIL_SIDE_CELLS = 1;
+
+  const LS_KEY_JAY  = "margit_snake_high_jay";
+  const LS_KEY_DANI = "margit_snake_high_dani";
+
+  const DIRS = [
+    { name:"U", x: 0, y:-1 },
+    { name:"R", x: 1, y: 0 },
+    { name:"D", x: 0, y: 1 },
+    { name:"L", x:-1, y: 0 },
+  ];
+  const DIR_BY_NAME = new Map(DIRS.map(d => [d.name, d]));
+  const OPP = { U:"D", D:"U", L:"R", R:"L" };
+
+  // =====================================================================
+  // HELPERS
+  // =====================================================================
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const key2 = (x, y) => `${x},${y}`;
+
+  function rectsIntersect(ax, ay, aw, ah, bx, by, bw, bh) {
+    return ax < bx+bw && ax+aw > bx && ay < by+bh && ay+ah > by;
+  }
+  function nowSec() { return performance.now() * 0.001; }
+
+  // =====================================================================
+  // SEEDED RNG
+  // =====================================================================
+  class RNG {
+    constructor(seed) { this.s = (seed >>> 0) || 0x12345678; }
+    nextU32() {
+      let x = this.s;
+      x ^= x << 13; x >>>= 0;
+      x ^= x >>> 17; x >>>= 0;
+      x ^= x << 5;  x >>>= 0;
+      this.s = x; return x;
+    }
+    next() { return this.nextU32() / 0xFFFFFFFF; }
+    int(a, b) { return a + (this.nextU32() % (b - a + 1)); }
+  }
+
+  // =====================================================================
+  // IMAGE LOADING
+  // =====================================================================
+  function loadOptionalImage(src) {
+    return new Promise(resolve => {
+      const img = new Image();
+      img.onload  = () => resolve({ ok:true, img });
+      img.onerror = () => resolve({ ok:false, img:null });
+      img.src = src;
+    });
+  }
+
+  // =====================================================================
+  // AUDIO SYSTEM
+  // =====================================================================
+  class AudioSystem {
+    constructor() {
+      this.ctx = null; this.master = null;
+      this.enabled = false; this.started = false;
+    }
+    init() {
+      if (this.started) return;
+      this.started = true;
+      try {
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        this.ctx = new Ctx();
+        this.master = this.ctx.createGain();
+        this.master.gain.value = 0.42;
+        this.master.connect(this.ctx.destination);
+        this.enabled = true;
+      } catch { this.enabled = false; }
+    }
+    _ok() {
+      if (!this.enabled || !this.ctx) return false;
+      if (this.ctx.state === "suspended") this.ctx.resume().catch(() => {});
+      return true;
+    }
+
+    // Soft magical shimmer — mushroom spawn
+    mushroomSpawn() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.28, t+0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.55);
+
+      const freqs = [880, 1108, 1320, 1760];
+      freqs.forEach((f, i) => {
+        const o = this.ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.setValueAtTime(f * 0.5, t + i*0.04);
+        o.frequency.exponentialRampToValueAtTime(f, t + i*0.04 + 0.12);
+        o.connect(g);
+        o.start(t + i*0.04);
+        o.stop(t + 0.55);
+      });
+      g.connect(this.master);
+    }
+
+    // Happy woo — mushroom eaten
+    pickupBlip() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.6, t+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.22);
+
+      const o1 = this.ctx.createOscillator();
+      o1.type = "triangle";
+      o1.frequency.setValueAtTime(880, t);
+      o1.frequency.setValueAtTime(1100, t+0.05);
+      o1.frequency.exponentialRampToValueAtTime(1568, t+0.16);
+
+      const o2 = this.ctx.createOscillator();
+      o2.type = "sine";
+      o2.frequency.setValueAtTime(1760, t+0.03);
+      o2.frequency.exponentialRampToValueAtTime(2640, t+0.18);
+
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass"; lp.frequency.setValueAtTime(5000, t);
+
+      o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(this.master);
+      o1.start(t); o2.start(t+0.03);
+      o1.stop(t+0.22); o2.stop(t+0.22);
+    }
+
+    // Poop drop — comedic
+    fart() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.75, t+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.26);
+
+      const lp = this.ctx.createBiquadFilter();
+      lp.type = "lowpass";
+      lp.frequency.setValueAtTime(380, t);
+      lp.frequency.exponentialRampToValueAtTime(140, t+0.10);
+      lp.frequency.exponentialRampToValueAtTime(280, t+0.24);
+
+      const o1 = this.ctx.createOscillator(); o1.type = "square";
+      o1.frequency.setValueAtTime(100, t);
+      o1.frequency.exponentialRampToValueAtTime(38, t+0.20);
+
+      const o2 = this.ctx.createOscillator(); o2.type = "triangle";
+      o2.frequency.setValueAtTime(78, t+0.01);
+      o2.frequency.exponentialRampToValueAtTime(30, t+0.21);
+
+      const lfo = this.ctx.createOscillator();
+      const lfoG = this.ctx.createGain();
+      lfo.type = "sine"; lfo.frequency.value = 24;
+      lfoG.gain.value = 0.32;
+      lfo.connect(lfoG); lfoG.connect(g.gain);
+
+      o1.connect(lp); o2.connect(lp); lp.connect(g); g.connect(this.master);
+      lfo.start(t); o1.start(t); o2.start(t+0.01);
+      o1.stop(t+0.28); o2.stop(t+0.28); lfo.stop(t+0.28);
+    }
+
+    // Rita presence — ominous rumble
+    ritaSpawnSwell() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.65, t+0.14);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.95);
+
+      const filt = this.ctx.createBiquadFilter();
+      filt.type = "lowpass";
+      filt.frequency.setValueAtTime(120, t);
+      filt.frequency.exponentialRampToValueAtTime(850, t+0.32);
+      filt.frequency.exponentialRampToValueAtTime(160, t+0.95);
+
+      const oA = this.ctx.createOscillator(); oA.type = "sawtooth"; oA.frequency.value = 48;
+      const oB = this.ctx.createOscillator(); oB.type = "sawtooth"; oB.frequency.value = 50.5;
+
+      const lfo = this.ctx.createOscillator();
+      const lfoG = this.ctx.createGain();
+      lfo.type = "sine"; lfo.frequency.value = 5.5;
+      lfoG.gain.value = 70;
+      lfo.connect(lfoG); lfoG.connect(filt.frequency);
+
+      oA.connect(filt); oB.connect(filt); filt.connect(g); g.connect(this.master);
+      lfo.start(t); oA.start(t); oB.start(t);
+      oA.stop(t+1.0); oB.stop(t+1.0); lfo.stop(t+1.0);
+    }
+
+    // Rita alarm — pulsed two-tone klaxon when she appears
+    ritaAlarm() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+      const pulseLen = 0.13, gap = 0.06;
+      const freqs = [880, 1100, 880];
+      freqs.forEach((freq, i) => {
+        const start = t + i * (pulseLen + gap);
+        const o = this.ctx.createOscillator();
+        const g = this.ctx.createGain();
+        o.type = "square"; o.frequency.value = freq;
+        g.gain.setValueAtTime(0.0001, start);
+        g.gain.exponentialRampToValueAtTime(0.38, start + 0.015);
+        g.gain.setValueAtTime(0.38, start + pulseLen - 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, start + pulseLen);
+        o.connect(g); g.connect(this.master);
+        o.start(start); o.stop(start + pulseLen + 0.01);
+      });
+    }
+
+    // Poop hit — loud, disgusting splat + shrink crunch
+    shrinkHit() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+
+      // === THUD: deep bass impact ===
+      const gThud = this.ctx.createGain();
+      gThud.gain.setValueAtTime(0.0001, t);
+      gThud.gain.exponentialRampToValueAtTime(0.95, t + 0.004);
+      gThud.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+      const oThud = this.ctx.createOscillator();
+      oThud.type = "sine";
+      oThud.frequency.setValueAtTime(140, t);
+      oThud.frequency.exponentialRampToValueAtTime(28, t + 0.24);
+      oThud.connect(gThud); gThud.connect(this.master);
+      oThud.start(t); oThud.stop(t + 0.28);
+
+      // === SPLAT: filtered noise burst ===
+      const splatLen = Math.floor(this.ctx.sampleRate * 0.18);
+      const splatBuf = this.ctx.createBuffer(1, splatLen, this.ctx.sampleRate);
+      const splatData = splatBuf.getChannelData(0);
+      for (let i = 0; i < splatLen; i++) splatData[i] = Math.random() * 2 - 1;
+      const splat = this.ctx.createBufferSource();
+      splat.buffer = splatBuf;
+      const splatBP = this.ctx.createBiquadFilter();
+      splatBP.type = "bandpass"; splatBP.frequency.value = 700; splatBP.Q.value = 0.7;
+      const gSplat = this.ctx.createGain();
+      gSplat.gain.setValueAtTime(0.0001, t);
+      gSplat.gain.exponentialRampToValueAtTime(0.7, t + 0.003);
+      gSplat.gain.exponentialRampToValueAtTime(0.0001, t + 0.17);
+      splat.connect(splatBP); splatBP.connect(gSplat); gSplat.connect(this.master);
+      splat.start(t); splat.stop(t + 0.18);
+
+      // === CRUNCH: descending "ouch" pitch ===
+      const gCrunch = this.ctx.createGain();
+      gCrunch.gain.setValueAtTime(0.0001, t + 0.04);
+      gCrunch.gain.exponentialRampToValueAtTime(0.6, t + 0.07);
+      gCrunch.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+      const oCrunch = this.ctx.createOscillator();
+      oCrunch.type = "square";
+      oCrunch.frequency.setValueAtTime(520, t + 0.04);
+      oCrunch.frequency.exponentialRampToValueAtTime(90, t + 0.40);
+      const lpCrunch = this.ctx.createBiquadFilter();
+      lpCrunch.type = "lowpass"; lpCrunch.frequency.value = 900;
+      oCrunch.connect(lpCrunch); lpCrunch.connect(gCrunch); gCrunch.connect(this.master);
+      oCrunch.start(t + 0.04); oCrunch.stop(t + 0.45);
+    }
+  }
+
+  // =====================================================================
+  // SNAKE
+  // =====================================================================
+  class Snake {
+    constructor(id, label, headImgRef, colorBody, colorGlow) {
+      this.id = id; this.label = label;
+      this.headImgRef = headImgRef;
+      this.colorBody = colorBody; this.colorGlow = colorGlow;
+      this.isHuman = true; this.controls = null;
+      this.body = []; this.dir = "R"; this.nextDir = "R";
+      this.pendingGrowth = 0; this.score = 0;
+      this.aiLastWanted = "R";
+    }
+    reset(startCells, dirName) {
+      this.body = startCells.map(p => ({ x:p.x, y:p.y }));
+      this.dir = dirName; this.nextDir = dirName;
+      this.pendingGrowth = 0; this.score = 0;
+      this.aiLastWanted = dirName;
+    }
+    head() { return this.body[0]; }
+    setDesiredDir(dirName) {
+      if (!DIR_BY_NAME.has(dirName)) return;
+      if (OPP[dirName] === this.dir) return;
+      this.nextDir = dirName;
+    }
+    lockInDirection() {
+      if (OPP[this.nextDir] !== this.dir) this.dir = this.nextDir;
+    }
+    computeNextBody() {
+      const d = DIR_BY_NAME.get(this.dir);
+      const head = this.head();
+      const nx = head.x + d.x, ny = head.y + d.y;
+      const nextBody = [{ x:nx, y:ny }, ...this.body.map(s => ({ x:s.x, y:s.y }))];
+      const willGrow = this.pendingGrowth > 0;
+      if (!willGrow) nextBody.pop();
+      return { nextBody, newHead: nextBody[0], willGrow };
+    }
+    commitNext(nextBody, willGrow) {
+      this.body = nextBody;
+      if (willGrow) this.pendingGrowth = Math.max(0, this.pendingGrowth - 1);
+    }
+    shrinkByOne() {
+      if (this.body.length <= 1) return false;
+      this.body.pop(); return true;
+    }
+  }
+
+  // =====================================================================
+  // RITA
+  // =====================================================================
+  class Rita {
+    constructor() {
+      this.active = false;
+      this.x = 0; this.y = 0;
+      this.vx = 0; this.vy = 0;
+      this.w = CELL * 2; this.h = CELL * 2;
+      this.speed = 200;
+      this.life = 0;
+      this.nextPoopAt = 0.3;
+      this.animFrame = 0;
+      this.animTimer = 0;
+    }
+    setSpeed(pxPerSec) { this.speed = pxPerSec; }
+
+    spawn(rng) {
+      const edge = rng.int(0, 3);
+      const gx = rng.int(0, GRID_W - 2) * CELL;
+      const gy = rng.int(0, GRID_H - 2) * CELL;
+      let x, y, ang;
+      if (edge === 0)      { x = -this.w;      y = gy; ang = (rng.next()*(Math.PI/2))-(Math.PI/4); }
+      else if (edge === 1) { x = CANVAS_W;     y = gy; ang = Math.PI+(rng.next()*(Math.PI/2))-(Math.PI/4); }
+      else if (edge === 2) { x = gx; y = -this.h;      ang = (Math.PI/2)+(rng.next()*(Math.PI/2))-(Math.PI/4); }
+      else                 { x = gx; y = CANVAS_H;     ang = (-Math.PI/2)+(rng.next()*(Math.PI/2))-(Math.PI/4); }
+      this.x = x; this.y = y;
+      this.vx = Math.cos(ang)*this.speed;
+      this.vy = Math.sin(ang)*this.speed;
+      this.active = true;
+      this.life = 0;
+      this.nextPoopAt = 0.15 + rng.next()*0.20;
+      this.animFrame = 0; this.animTimer = 0;
+    }
+
+    update(dt) {
+      if (!this.active) return;
+      this.life += dt;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      // Animate: 8 fps → 4 frames cycle
+      this.animTimer += dt;
+      if (this.animTimer >= 0.125) { this.animTimer -= 0.125; this.animFrame = (this.animFrame + 1) % 4; }
+      const m = 6;
+      if (this.x < -this.w-m || this.x > CANVAS_W+m || this.y < -this.h-m || this.y > CANVAS_H+m) {
+        this.active = false;
+      }
+    }
+    rect() { return { x:this.x, y:this.y, w:this.w, h:this.h }; }
+  }
+
+  // =====================================================================
+  // POOP
+  // =====================================================================
+  class Poop {
+    constructor() {
+      this.active = false;
+      this.x = 0; this.y = 0;
+      this.spawnT = 0;
+      this.despawnAt = Infinity;
+      this.fadeStart = Infinity;
+      this.fadeSeconds = 0.8;
+    }
+    spawn(gx, gy, nowT) {
+      this.active = true; this.x = gx; this.y = gy;
+      this.spawnT = nowT; this.despawnAt = Infinity; this.fadeStart = Infinity;
+    }
+    scheduleDespawn(afterSec, fadeSec, nowT) {
+      if (!this.active) return;
+      if (Number.isFinite(this.despawnAt) && this.despawnAt !== Infinity) return;
+      this.despawnAt = nowT + afterSec;
+      this.fadeSeconds = fadeSec;
+      this.fadeStart = this.despawnAt - fadeSec;
+    }
+    update(nowT) { if (!this.active) return; if (nowT >= this.despawnAt) this.active = false; }
+    alpha(nowT) {
+      if (!this.active) return 0;
+      if (nowT < this.fadeStart) return 1;
+      const t = (nowT - this.fadeStart) / Math.max(0.0001, this.fadeSeconds);
+      return clamp(1 - t, 0, 1);
+    }
+  }
+
+  // =====================================================================
+  // AI — always aggressive, BFS toward nearest mushroom
+  // =====================================================================
+  class SnakeAI {
+    decideDirection(state, snake, otherSnake) {
+      const target = this._bfsMushroom(state, snake, otherSnake);
+      let wanted = (target && target.firstDir) ? target.firstDir : null;
+      if (!wanted) wanted = this._safestMove(state, snake, otherSnake) || snake.dir;
+      if (OPP[wanted] === snake.dir) wanted = snake.dir;
+      snake.aiLastWanted = wanted;
+      return wanted;
+    }
+
+    _bfsMushroom(state, snake, otherSnake) {
+      if (!state.mushrooms.length) return null;
+      const start = snake.head();
+      const blocked = this._blocked(state, snake, otherSnake);
+      const q = [{ x:start.x, y:start.y }];
+      const visited = new Set([key2(start.x, start.y)]);
+      const parent = new Map(), parentDir = new Map();
+      const targets = new Set(state.mushrooms.map(m => key2(m.x, m.y)));
+      let found = null;
+
+      while (q.length) {
+        const cur = q.shift();
+        const ck = key2(cur.x, cur.y);
+        if (targets.has(ck) && ck !== key2(start.x, start.y)) { found = ck; break; }
+        for (const d of DIRS) {
+          const nx = cur.x+d.x, ny = cur.y+d.y;
+          if (nx<0||ny<0||nx>=GRID_W||ny>=GRID_H) continue;
+          const nk = key2(nx, ny);
+          if (visited.has(nk)||blocked.has(nk)) continue;
+          visited.add(nk); parent.set(nk, ck); parentDir.set(nk, d.name);
+          q.push({ x:nx, y:ny });
+        }
+      }
+      if (!found) return null;
+      const sk = key2(start.x, start.y);
+      let k = found, prev = parent.get(k);
+      while (prev && prev !== sk) { k = prev; prev = parent.get(k); }
+      const firstDir = parentDir.get(k) || parentDir.get(found);
+      if (!firstDir || OPP[firstDir] === snake.dir) return null;
+      return { firstDir };
+    }
+
+    _safestMove(state, snake, otherSnake) {
+      const candidates = [];
+      for (const d of DIRS) {
+        if (OPP[d.name] === snake.dir) continue;
+        if (!this._immSafe(state, snake, otherSnake, d.name)) continue;
+        const area = this._flood(state, snake, otherSnake, d.name, 8000);
+        candidates.push({ dir:d.name, area });
+      }
+      if (!candidates.length) return null;
+      candidates.sort((a,b) => b.area - a.area);
+      const best = candidates[0].area;
+      const dirs = candidates.filter(c => c.area === best).map(c => c.dir);
+      for (const d of DIRS) if (dirs.includes(d.name)) return d.name;
+      return candidates[0].dir;
+    }
+
+    _immSafe(state, snake, otherSnake, dirName) {
+      const d = DIR_BY_NAME.get(dirName), h = snake.head();
+      const nx = h.x+d.x, ny = h.y+d.y;
+      if (nx<0||ny<0||nx>=GRID_W||ny>=GRID_H) return false;
+      return !this._blocked(state, snake, otherSnake).has(key2(nx, ny));
+    }
+
+    _flood(state, snake, otherSnake, dirName, max) {
+      const d = DIR_BY_NAME.get(dirName), h = snake.head();
+      const sx = h.x+d.x, sy = h.y+d.y;
+      if (sx<0||sy<0||sx>=GRID_W||sy>=GRID_H) return 0;
+      const blocked = this._blocked(state, snake, otherSnake);
+      const sk = key2(sx, sy);
+      if (blocked.has(sk)) return 0;
+      const q = [{ x:sx, y:sy }];
+      const vis = new Set([sk]);
+      let count = 0;
+      while (q.length && count < max) {
+        const cur = q.shift(); count++;
+        for (const nd of DIRS) {
+          const nx = cur.x+nd.x, ny = cur.y+nd.y;
+          if (nx<0||ny<0||nx>=GRID_W||ny>=GRID_H) continue;
+          const k = key2(nx, ny);
+          if (vis.has(k)||blocked.has(k)) continue;
+          vis.add(k); q.push({ x:nx, y:ny });
+        }
+      }
+      return count;
+    }
+
+    _blocked(state, snake, otherSnake) {
+      const b = new Set();
+      const noOwnTail = snake.pendingGrowth > 0;
+      for (let i=0; i<snake.body.length; i++) {
+        if (i===snake.body.length-1 && !noOwnTail) continue;
+        b.add(key2(snake.body[i].x, snake.body[i].y));
+      }
+      const noOtherTail = otherSnake.pendingGrowth > 0;
+      for (let i=0; i<otherSnake.body.length; i++) {
+        if (i===otherSnake.body.length-1 && !noOtherTail) continue;
+        b.add(key2(otherSnake.body[i].x, otherSnake.body[i].y));
+      }
+      if (state.rita.active) {
+        const rr = state.rita.rect();
+        const buf = 3; // 3-cell safety buffer so AI steers well clear
+        const gx0 = clamp(Math.floor(rr.x/CELL)-buf, 0, GRID_W-1);
+        const gx1 = clamp(Math.floor((rr.x+rr.w)/CELL)+buf, 0, GRID_W-1);
+        const gy0 = clamp(Math.floor(rr.y/CELL)-buf, 0, GRID_H-1);
+        const gy1 = clamp(Math.floor((rr.y+rr.h)/CELL)+buf, 0, GRID_H-1);
+        for (let gy=gy0; gy<=gy1; gy++) for (let gx=gx0; gx<=gx1; gx++) {
+          b.add(key2(gx, gy));
+        }
+      }
+      // Avoid poops too
+      for (const p of state.poops) {
+        if (p.active) b.add(key2(p.x, p.y));
+      }
+      return b;
+    }
+  }
+
+  // =====================================================================
+  // RITA SPRITE RENDERER (programmatic pixel-art)
+  // =====================================================================
+  // drawRitaSprite — pixel-art angry girl, 40×40px hitbox (P=2.5, 16×16 logical grid)
+  function drawRitaSprite(ctx, x, y, frame) {
+    // frame 0-3: walking animation cycle
+    const bounce = (frame & 1) ? -2 : 0;   // head/body bobs 2px on odd frames
+    const stride = frame % 4;              // 0=neutral, 1=stride-L, 2=neutral, 3=stride-R
+
+    const hair  = '#0d0608';  // very dark brown-black
+    const skin  = '#c87240';  // warm skin tone
+    const cloth = '#1a1232';  // dark navy-purple
+    const eye   = '#cc1818';  // angry red eyes
+    const mouth = '#7a2c18';  // dark frown
+    const boot  = '#080810';  // near-black boots
+
+    // P=2.5 → 16 logical units = 40px exactly
+    const P = 2.5;
+    const R = (lx, ly, lw, lh, color) => {
+      ctx.fillStyle = color;
+      ctx.fillRect(x + lx*P, y + ly*P + bounce, lw*P, lh*P);
+    };
+
+    ctx.save();
+    ctx.shadowColor = 'rgba(220,60,60,0.45)';
+    ctx.shadowBlur = 12;
+
+    // ---- HAIR: rows 0-9 ----
+    R(3,  0,  10, 2,  hair);   // top crown
+    R(2,  1,  12, 5,  hair);   // main hair mass
+    R(0,  3,  3,  6,  hair);   // left side drape
+    R(13, 3,  3,  6,  hair);   // right side drape
+
+    // ---- FACE: rows 2-8 (behind hair sides) ----
+    R(3,  2,  10, 7,  skin);   // face rectangle
+
+    // ---- ANGRY BROWS ----
+    R(3,  3,  3,  1,  hair);   // left brow (inner higher = V shape)
+    R(10, 3,  3,  1,  hair);   // right brow
+    R(3,  2,  2,  1,  hair);   // left outer lower
+    R(11, 2,  2,  1,  hair);   // right outer lower
+
+    // ---- EYES (red angry slits) ----
+    R(3,  5,  3,  1,  eye);    // left eye
+    R(10, 5,  3,  1,  eye);    // right eye
+
+    // ---- FROWN ----
+    R(5,  8,  6,  1,  mouth);  // frown base
+    R(3,  7,  2,  1,  mouth);  // left corner drooping
+    R(11, 7,  2,  1,  mouth);  // right corner drooping
+
+    // ---- NECK: rows 9-9 ----
+    R(5,  9,  6,  1,  skin);
+
+    // ---- TORSO + ARMS: rows 10-12 ----
+    R(0,  10, 16, 3,  cloth);  // full-width torso+arms block
+    R(3,  10, 10, 3,  cloth);  // chest (slightly lighter shade handled by flat color)
+
+    // ---- LEGS (animated): rows 13-14 ----
+    let lx = 4, rx = 9;
+    if (stride === 1) { lx = 3; rx = 10; }
+    else if (stride === 3) { lx = 5; rx = 8; }
+
+    R(lx,   13, 3, 2, cloth);  // left leg
+    R(rx,   13, 3, 2, cloth);  // right leg
+
+    // ---- BOOTS: row 15 ----
+    R(lx-1, 15, 5, 1, boot);   // left boot
+    R(rx-1, 15, 5, 1, boot);   // right boot
+
+    ctx.restore();
+  }
+
+  // =====================================================================
+  // GAME
+  // =====================================================================
+  class Game {
+    constructor(canvas, ctx, assets, audio) {
+      this.canvas = canvas; this.ctx = ctx;
+      this.assets = assets; this.audio = audio;
+
+      this.state = "menu";
+      this.mode = "single_jay";
+      this.speedLevel = "high";
+
+      this.tickHz = 10;
+      this.tickDt = 1 / this.tickHz;
+      this.snakePxSpeed = this.tickHz * CELL;
+
+      this.jayAcc = 0; this.daniAcc = 0; this.lastT = nowSec();
+      this.rng = new RNG((Date.now() ^ (Math.random()*0xFFFFFFFF)) >>> 0);
+
+      this.mushrooms = [];
+      this.mushroomCount = MUSHROOM_COUNT_DEFAULT;
+      this.mushroomSpawnEffects = []; // { x, y, t } for spawn animation
+
+      this.rita = new Rita();
+      this.ritaTimer = 0;
+      this.poops = [];
+      this.prevRitaActive = false;
+
+      this.ai = new SnakeAI();
+
+      this.jay  = new Snake("jay",  "J", assets.jay,  "rgba(50,150,255,.95)", "#3af");
+      this.dani = new Snake("dani", "D", assets.dani, "rgba(255,145,50,.95)", "#fa6");
+
+      this.jay.controls  = { ArrowUp:"U", ArrowRight:"R", ArrowDown:"D", ArrowLeft:"L" };
+      this.dani.controls = { KeyW:"U",    KeyD:"R",       KeyS:"D",      KeyA:"L" };
+
+      this.highJay  = this._loadHigh(LS_KEY_JAY);
+      this.highDani = this._loadHigh(LS_KEY_DANI);
+
+      this.gameOverInfo = null;
+      this._bindVisibilityPause();
+    }
+
+    _loadHigh(k) { const v = localStorage.getItem(k); const n = Number(v); return Number.isFinite(n) ? n : 0; }
+    _saveHigh()  { localStorage.setItem(LS_KEY_JAY, String(this.highJay)); localStorage.setItem(LS_KEY_DANI, String(this.highDani)); }
+
+    setMode(m)  { this.mode = m; }
+    setSpeedLevel(s) { this.speedLevel = s; }
+
+    startGame() { this._resetWorld(); this.state = "running"; }
+    backToMenu() { this.state = "menu"; }
+    togglePause() { if (this.state==="running") this.state="paused"; else if (this.state==="paused") this.state="running"; }
+    restart()    { this._resetWorld(); this.state = "running"; }
+
+    _applySpeed() {
+      const hz = this.speedLevel==="super" ? 14 : this.speedLevel==="stoned" ? 7 : 10;
+      this.tickHz = hz; this.tickDt = 1/hz; this.snakePxSpeed = hz*CELL;
+      this.rita.setSpeed((this.snakePxSpeed*0.5)*2.6);
+    }
+
+    // Returns the tick interval (seconds) for a given snake.
+    // AI snakes move at 80% of human speed (25% longer interval).
+    // Both snakes accumulate a length-based "heaviness" penalty.
+    _snakeInterval(snake) {
+      const aiMult     = snake.isHuman ? 1.0 : (1 / 0.8); // AI = 80% speed
+      const lengthMult = 1 + Math.max(0, snake.body.length - 4) * 0.04;
+      return this.tickDt * aiMult * lengthMult;
+    }
+
+    _resetWorld() {
+      this.rng = new RNG((Date.now() ^ (Math.random()*0xFFFFFFFF)) >>> 0);
+      this._applySpeed();
+
+      this.jay.reset([{x:10,y:22},{x:9,y:22},{x:8,y:22},{x:7,y:22}], "R");
+      this.dani.reset([{x:49,y:22},{x:50,y:22},{x:51,y:22},{x:52,y:22}], "L");
+
+      this.jay.isHuman  = this.mode !== "single_dani";
+      this.dani.isHuman = this.mode !== "single_jay";
+
+      this.jayAcc = 0; this.daniAcc = 0; this.lastT = nowSec();
+      this.mushrooms = []; this.mushroomSpawnEffects = [];
+      this._ensureMushrooms();
+      this.rita.active = false; this.ritaTimer = 0; this.prevRitaActive = false;
+      this.poops = []; this.gameOverInfo = null;
+    }
+
+    _bindVisibilityPause() {
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden && this.state==="running") this.state="paused";
+      });
+    }
+
+    onKeyDown(e) {
+      this.audio.init();
+      if (e.code==="KeyP" && (this.state==="running"||this.state==="paused")) { this.togglePause(); return; }
+      if (e.code==="KeyR") { this.restart(); return; }
+      if ((e.code==="Space"||e.code==="Enter") && this.state==="menu") { this.startGame(); return; }
+      if (this.state!=="running") return;
+      if (this.jay.isHuman  && this.jay.controls[e.code])  this.jay.setDesiredDir(this.jay.controls[e.code]);
+      if (this.dani.isHuman && this.dani.controls[e.code]) this.dani.setDesiredDir(this.dani.controls[e.code]);
+    }
+    onPointerDown() { this.audio.init(); }
+
+    // Direct direction input (from D-pad or swipe)
+    inputDir(dirName) {
+      if (this.state !== "running") return;
+      // In single modes swipe controls the human. In two_player, swipe controls Jay.
+      if (this.jay.isHuman) this.jay.setDesiredDir(dirName);
+      else if (this.dani.isHuman) this.dani.setDesiredDir(dirName);
+    }
+
+    updateFrame() {
+      // Wrap everything in try-catch so no error can ever kill the RAF loop
+      try {
+        const t = nowSec();
+        let dt = clamp(t - this.lastT, 0, 0.25);
+        this.lastT = t;
+
+        if (this.state === "running") {
+          // Rita spawn timer
+          this.ritaTimer += dt;
+          if (!this.rita.active && this.ritaTimer >= RITA_SPAWN_INTERVAL) {
+            this.ritaTimer = 0;
+            this.rita.spawn(this.rng);
+            this.audio.ritaSpawnSwell();
+          }
+
+          const wasActive = this.prevRitaActive;
+          const isActive  = this.rita.active;
+          this.prevRitaActive = isActive;
+
+          if (isActive) {
+            this.rita.update(dt);
+            // Drop poop trail (guaranteed multiple drops)
+            if (this.poops.length < MAX_ACTIVE_POOPS && this.rita.life >= this.rita.nextPoopAt) {
+              this._dropPoopTrail();
+              this.rita.nextPoopAt += POOP_DROP_BASE_INTERVAL_MIN +
+                this.rng.next()*(POOP_DROP_BASE_INTERVAL_MAX - POOP_DROP_BASE_INTERVAL_MIN);
+            }
+          } else if (wasActive) {
+            // Rita just left — schedule all poops to despawn
+            const nowT = nowSec();
+            for (const p of this.poops) {
+              if (p.active) p.scheduleDespawn(POOP_LINGER_AFTER_RITA_LEAVES, POOP_DESPAWN_FADE, nowT);
+            }
+          }
+
+          // Rita warning banner: show on spawn, hide halfway through (~2.5s)
+          const showAlert = this.rita.active && this.rita.life < 2.5;
+          ritaAlert.classList.toggle("visible", showAlert);
+
+          this._updatePoops(nowSec());
+
+          this.jayAcc += dt;
+          this.daniAcc += dt;
+          while (this.state === "running") {
+            const jInt   = this._snakeInterval(this.jay);
+            const dInt   = this._snakeInterval(this.dani);
+            const jFires = this.jayAcc  >= jInt;
+            const dFires = this.daniAcc >= dInt;
+            if (!jFires && !dFires) break;
+            if (jFires) this.jayAcc  -= jInt;
+            if (dFires) this.daniAcc -= dInt;
+            this._tickSnakes(jFires, dFires);
+          }
+        } else {
+          ritaAlert.classList.remove("visible");
+          this._updatePoops(nowSec());
+        }
+
+        this.render();
+      } catch(err) {
+        console.error("[game loop error]", err);
+      }
+      requestAnimationFrame(() => this.updateFrame());
+    }
+
+    _updatePoops(nowT) {
+      if (!this.poops.length) return;
+      for (const p of this.poops) p.update(nowT);
+      this.poops = this.poops.filter(p => p.active);
+    }
+
+    _dropPoopTrail() {
+      const nowT = nowSec();
+      const vx = this.rita.vx, vy = this.rita.vy;
+      const mag = Math.hypot(vx, vy) || 1;
+      const ux = vx/mag, uy = vy/mag;
+      const lx = -uy, ly = ux;
+      const back = (this.rita.w*0.5) + (POOP_TRAIL_BACK_CELLS*CELL);
+      const side = this.rng.int(-POOP_TRAIL_SIDE_CELLS, POOP_TRAIL_SIDE_CELLS) * CELL;
+      const cx = this.rita.x + this.rita.w*0.5;
+      const cy = this.rita.y + this.rita.h*0.5;
+      const px = cx - ux*back + lx*side;
+      const py = cy - uy*back + ly*side;
+      const gx = clamp(Math.floor(px/CELL), 0, GRID_W-1);
+      const gy = clamp(Math.floor(py/CELL), 0, GRID_H-1);
+
+      const tries = [
+        {x:gx,y:gy},
+        {x:clamp(gx+1,0,GRID_W-1),y:gy},
+        {x:clamp(gx-1,0,GRID_W-1),y:gy},
+        {x:gx,y:clamp(gy+1,0,GRID_H-1)},
+        {x:gx,y:clamp(gy-1,0,GRID_H-1)},
+      ];
+      const occ = this._occupiedSet(true);
+      for (const c of tries) {
+        if (occ.has(key2(c.x, c.y))) continue;
+        if (this._cellHitsRita(c.x, c.y)) continue;
+        const p = new Poop();
+        p.spawn(c.x, c.y, nowT);
+        this.poops.push(p);
+        this.audio.fart();
+        return;
+      }
+    }
+
+    _tickSnakes(jFires = true, dFires = true) {
+      if (jFires && !this.jay.isHuman)  this.jay.setDesiredDir(this.ai.decideDirection(this, this.jay,  this.dani));
+      if (dFires && !this.dani.isHuman) this.dani.setDesiredDir(this.ai.decideDirection(this, this.dani, this.jay));
+
+      if (jFires) this.jay.lockInDirection();
+      if (dFires) this.dani.lockInDirection();
+
+      let cJ = false, cD = false;
+      let jRita = false, dRita = false;
+
+      if (jFires && dFires) {
+        // ── Both snakes move: full mutual collision detection ──
+        const jN = this.jay.computeNextBody();
+        const dN = this.dani.computeNextBody();
+        const jH = jN.newHead, dH = dN.newHead;
+
+        if (jH.x<0||jH.y<0||jH.x>=GRID_W||jH.y>=GRID_H) cJ=true;
+        if (dH.x<0||dH.y<0||dH.x>=GRID_W||dH.y>=GRID_H) cD=true;
+        if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
+        if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
+
+        const jSet = new Set(jN.nextBody.map(s=>key2(s.x,s.y)));
+        const dSet = new Set(dN.nextBody.map(s=>key2(s.x,s.y)));
+        const jHK = key2(jH.x,jH.y), dHK = key2(dH.x,dH.y);
+
+        if (jHK===dHK) { cJ=true; cD=true; }
+        if (!cJ && dSet.has(jHK)) cJ=true;
+        if (!cD && jSet.has(dHK)) cD=true;
+
+        jRita = !cJ && this._snakeHitsRita(jN.nextBody);
+        dRita = !cD && this._snakeHitsRita(dN.nextBody);
+        if (jRita) cJ=true;
+        if (dRita) cD=true;
+
+        if (cJ||cD) {
+          let winner = "draw";
+          if (cJ&&!cD) winner="dani"; else if (cD&&!cJ) winner="jay";
+          this._gameOver({ winner, crashed:{jay:cJ,dani:cD}, ritaKilled:{jay:jRita,dani:dRita} });
+          return;
+        }
+        this.jay.commitNext(jN.nextBody, jN.willGrow);
+        this.dani.commitNext(dN.nextBody, dN.willGrow);
+
+      } else if (jFires) {
+        // ── Only Jay moves ──
+        const jN = this.jay.computeNextBody();
+        const jH = jN.newHead;
+
+        if (jH.x<0||jH.y<0||jH.x>=GRID_W||jH.y>=GRID_H) cJ=true;
+        if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
+        if (!cJ) {
+          const dBodies = new Set(this.dani.body.map(s=>key2(s.x,s.y)));
+          if (dBodies.has(key2(jH.x,jH.y))) cJ=true;
+        }
+        jRita = !cJ && this._snakeHitsRita(jN.nextBody);
+        if (jRita) cJ=true;
+
+        if (cJ) {
+          this._gameOver({ winner:"dani", crashed:{jay:true,dani:false}, ritaKilled:{jay:jRita,dani:false} });
+          return;
+        }
+        this.jay.commitNext(jN.nextBody, jN.willGrow);
+
+      } else if (dFires) {
+        // ── Only Dani moves ──
+        const dN = this.dani.computeNextBody();
+        const dH = dN.newHead;
+
+        if (dH.x<0||dH.y<0||dH.x>=GRID_W||dH.y>=GRID_H) cD=true;
+        if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
+        if (!cD) {
+          const jBodies = new Set(this.jay.body.map(s=>key2(s.x,s.y)));
+          if (jBodies.has(key2(dH.x,dH.y))) cD=true;
+        }
+        dRita = !cD && this._snakeHitsRita(dN.nextBody);
+        if (dRita) cD=true;
+
+        if (cD) {
+          this._gameOver({ winner:"jay", crashed:{jay:false,dani:true}, ritaKilled:{jay:false,dani:dRita} });
+          return;
+        }
+        this.dani.commitNext(dN.nextBody, dN.willGrow);
+      }
+
+      if (this._handlePoopHits()) return;
+      this._handleMushroomEats();
+      this._ensureMushrooms();
+    }
+
+    _handlePoopHits() {
+      if (!this.poops.length) return false;
+      const jH = this.jay.head(),  jK = key2(jH.x,jH.y);
+      const dH = this.dani.head(), dK = key2(dH.x,dH.y);
+      let hitJ=false, hitD=false;
+      const remaining = [];
+      for (const p of this.poops) {
+        if (!p.active) continue;
+        const pk = key2(p.x,p.y);
+        if (pk===jK) hitJ=true;
+        else if (pk===dK) hitD=true;
+        else remaining.push(p);
+        if (pk===jK||pk===dK) p.active=false;
+      }
+      this.poops = remaining;
+      if (!hitJ && !hitD) return false;
+      if (hitJ||hitD) this.audio.shrinkHit();
+      let cJ=false, cD=false;
+      if (hitJ && !this.jay.shrinkByOne())  cJ=true;
+      if (hitD && !this.dani.shrinkByOne()) cD=true;
+      if (cJ||cD) {
+        let winner="draw";
+        if (cJ&&!cD) winner="dani"; else if (cD&&!cJ) winner="jay";
+        this._gameOver({winner,crashed:{jay:cJ,dani:cD}});
+        return true;
+      }
+      return false;
+    }
+
+    _headHitsBody(body) {
+      const hk = key2(body[0].x, body[0].y);
+      for (let i=1; i<body.length; i++) if (key2(body[i].x,body[i].y)===hk) return true;
+      return false;
+    }
+    _snakeHitsRita(body) {
+      if (!this.rita.active) return false;
+      const rr = this.rita.rect();
+      for (const seg of body) {
+        if (rectsIntersect(seg.x*CELL, seg.y*CELL, CELL, CELL, rr.x, rr.y, rr.w, rr.h)) return true;
+      }
+      return false;
+    }
+
+    _handleMushroomEats() {
+      if (!this.mushrooms.length) return;
+      const jK = key2(this.jay.head().x, this.jay.head().y);
+      const dK = key2(this.dani.head().x, this.dani.head().y);
+      let ate=false;
+      const remaining=[];
+      for (const m of this.mushrooms) {
+        const mk = key2(m.x,m.y);
+        if (mk===jK) { this.jay.score++; this.jay.pendingGrowth++; ate=true; }
+        else if (mk===dK) { this.dani.score++; this.dani.pendingGrowth++; ate=true; }
+        else remaining.push(m);
+      }
+      if (ate) this.audio.pickupBlip();
+      this.mushrooms = remaining;
+    }
+
+    _ensureMushrooms() {
+      const prev = this.mushrooms.length;
+      while (this.mushrooms.length < this.mushroomCount) {
+        const c = this._randomEmpty();
+        if (!c) break;
+        this.mushrooms.push(c);
+        this.mushroomSpawnEffects.push({ x:c.x, y:c.y, t:nowSec() });
+        if (this.mushrooms.length > prev) this.audio.mushroomSpawn();
+      }
+    }
+
+    _randomEmpty() {
+      const occ = this._occupiedSet(true);
+      for (let i=0; i<500; i++) {
+        const x=this.rng.int(0,GRID_W-1), y=this.rng.int(0,GRID_H-1);
+        if (occ.has(key2(x,y))) continue;
+        if (this._cellHitsRita(x,y)) continue;
+        return {x,y};
+      }
+      for (let y=0;y<GRID_H;y++) for (let x=0;x<GRID_W;x++) {
+        if (!occ.has(key2(x,y)) && !this._cellHitsRita(x,y)) return {x,y};
+      }
+      return null;
+    }
+
+    _occupiedSet(includePoops) {
+      const s=new Set();
+      for (const seg of this.jay.body)  s.add(key2(seg.x,seg.y));
+      for (const seg of this.dani.body) s.add(key2(seg.x,seg.y));
+      for (const m of this.mushrooms)   s.add(key2(m.x,m.y));
+      if (includePoops) for (const p of this.poops) if (p.active) s.add(key2(p.x,p.y));
+      return s;
+    }
+    _cellHitsRita(gx,gy) {
+      if (!this.rita.active) return false;
+      const rr=this.rita.rect();
+      return rectsIntersect(gx*CELL,gy*CELL,CELL,CELL,rr.x,rr.y,rr.w,rr.h);
+    }
+
+    _gameOver(info) {
+      this.state="gameover"; this.gameOverInfo=info;
+      if (this.jay.score  > this.highJay)  this.highJay  = this.jay.score;
+      if (this.dani.score > this.highDani) this.highDani = this.dani.score;
+      this._saveHigh();
+      updateGameOverUI(this);
+      showGameOver(true);
+    }
+
+    // ==================================================================
+    // RENDER
+    // ==================================================================
+    render() {
+      const ctx = this.ctx;
+      ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+
+      // Background
+      if (this.assets.map.ok) {
+        ctx.globalAlpha = 1;
+        ctx.drawImage(this.assets.map.img, 0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "rgba(0,0,0,0.22)";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+      } else {
+        ctx.fillStyle = "#0e1e22";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.lineWidth = 1;
+        for (let y=0;y<CANVAS_H;y+=CELL) { ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(CANVAS_W,y); ctx.stroke(); }
+        for (let x=0;x<CANVAS_W;x+=CELL) { ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,CANVAS_H); ctx.stroke(); }
+      }
+
+      this._drawMushrooms(ctx);
+      this._drawPoops(ctx);
+      this._drawRita(ctx);
+      this._drawSnake(ctx, this.jay);
+      this._drawSnake(ctx, this.dani);
+      this._drawHUD(ctx);
+
+      if (this.state === "paused") {
+        ctx.fillStyle = "rgba(0,0,0,0.45)";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 52px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("⏸ PAUSED", CANVAS_W/2, CANVAS_H/2 - 14);
+        ctx.font = "18px system-ui, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.75)";
+        ctx.fillText("Press P to resume", CANVAS_W/2, CANVAS_H/2 + 36);
+      }
+    }
+
+    _drawMushrooms(ctx) {
+      const now = nowSec();
+      ctx.save();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+
+      // Clean up old effects
+      this.mushroomSpawnEffects = this.mushroomSpawnEffects.filter(e => now - e.t < 0.5);
+
+      for (const m of this.mushrooms) {
+        const px = m.x * CELL, py = m.y * CELL;
+
+        // Check for spawn animation
+        const ef = this.mushroomSpawnEffects.find(e => e.x===m.x && e.y===m.y);
+        let scale = 1;
+        if (ef) {
+          const p = (now - ef.t) / 0.4; // 0→1 over 0.4s
+          scale = p < 0.6 ? 0.3 + p/0.6*0.9 : 1.0 + (1-p)/0.4*0.15; // pop in
+          scale = clamp(scale, 0.1, 1.15);
+        }
+
+        ctx.save();
+        ctx.translate(px + CELL/2, py + CELL/2);
+        ctx.scale(scale, scale);
+
+        // Background pill
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
+        ctx.beginPath();
+        ctx.roundRect(-CELL/2+2, -CELL/2+2, CELL-4, CELL-4, 6);
+        ctx.fill();
+
+        // Glow ring
+        if (ef && scale > 0.5) {
+          ctx.strokeStyle = `rgba(255,220,100,${0.6*(1-(now-ef.t)/0.5)})`;
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(0, 0, CELL/2-1, 0, Math.PI*2);
+          ctx.stroke();
+        }
+
+        ctx.font = "18px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.98)";
+        ctx.fillText("🍄", 0, 1);
+
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    _drawRita(ctx) {
+      if (!this.rita.active) return;
+      const rr = this.rita.rect();
+      ctx.save();
+      // Add shadow behind Rita for depth
+      ctx.shadowColor = "rgba(220,60,60,0.55)";
+      ctx.shadowBlur = 18;
+      drawRitaSprite(ctx, rr.x, rr.y, this.rita.animFrame);
+      ctx.restore();
+
+      // Danger warning box (subtle)
+      ctx.save();
+      ctx.strokeStyle = "rgba(255,80,80,0.4)";
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4,4]);
+      ctx.strokeRect(rr.x-2, rr.y-2, rr.w+4, rr.h+4);
+      ctx.restore();
+    }
+
+    _drawPoops(ctx) {
+      if (!this.poops.length) return;
+      const t = nowSec();
+      ctx.save();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "16px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
+
+      for (const p of this.poops) {
+        if (!p.active) continue;
+        const a = p.alpha(t);
+        if (a <= 0.01) continue;
+        const px = p.x*CELL, py = p.y*CELL;
+        ctx.globalAlpha = a * 0.95;
+        // Shadow
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.beginPath();
+        ctx.ellipse(px+CELL/2, py+CELL/2+7, 7, 3.5, 0, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.98)";
+        ctx.fillText("💩", px+CELL/2, py+CELL/2+1);
+      }
+      ctx.globalAlpha = 1;
+      ctx.restore();
+    }
+
+    _drawSnake(ctx, snake) {
+      if (!snake.body || !snake.body.length) return;
+      ctx.save();
+
+      const isJay = snake.id === "jay";
+      const headRenderSize = CELL * 3; // 60px — big visible head
+      const h = snake.head();
+      const hPx = h.x * CELL, hPy = h.y * CELL;
+
+      // Draw body segments (back to front, skip head for now)
+      for (let i = snake.body.length-1; i >= 1; i--) {
+        const seg = snake.body[i];
+        const x = seg.x * CELL, y = seg.y * CELL;
+        const t = i / snake.body.length; // 1 at tail, 0 near head
+        const alpha = 0.65 + 0.35 * (1-t);
+
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = snake.colorBody;
+        ctx.strokeStyle = isJay ? "rgba(0,20,60,.7)" : "rgba(60,20,0,.7)";
+        ctx.lineWidth = 1.5;
+
+        const pad = 2.5;
+        ctx.beginPath();
+        ctx.roundRect(x+pad, y+pad, CELL-pad*2, CELL-pad*2, 5);
+        ctx.fill();
+        ctx.stroke();
+
+        // Shine on near-head segments
+        if (i < 4) {
+          ctx.fillStyle = "rgba(255,255,255,0.12)";
+          ctx.beginPath();
+          ctx.roundRect(x+pad+1, y+pad+1, (CELL-pad*2)*0.55, (CELL-pad*2)*0.45, 3);
+          ctx.fill();
+        }
+      }
+
+      ctx.globalAlpha = 1;
+
+      // Draw head — oversized, centered on head cell
+      const hr = headRenderSize;
+      const hrx = hPx + CELL/2 - hr/2;
+      const hry = hPy + CELL/2 - hr/2;
+
+      // Glow behind head
+      ctx.save();
+      ctx.shadowColor = snake.colorGlow;
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = snake.colorBody;
+      ctx.beginPath();
+      ctx.roundRect(hrx+2, hry+2, hr-4, hr-4, 14);
+      ctx.fill();
+      ctx.restore();
+
+      // Head outline
+      ctx.fillStyle = snake.colorBody;
+      ctx.strokeStyle = isJay ? "rgba(0,30,80,.85)" : "rgba(80,30,0,.85)";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.roundRect(hrx+2, hry+2, hr-4, hr-4, 14);
+      ctx.fill();
+      ctx.stroke();
+
+      // Face image (cropped to square center)
+      if (snake.headImgRef && snake.headImgRef.ok && snake.headImgRef.img) {
+        const img = snake.headImgRef.img;
+        const iw = img.naturalWidth || img.width;
+        const ih = img.naturalHeight || img.height;
+        // Crop a centered square — tuned per photo
+        const sq = Math.min(iw, ih);
+        let sx, sy;
+        if (isJay) {
+          // Jay: landscape portrait — center horizontally, face fills frame
+          sx = (iw - sq) / 2;
+          sy = ih * 0.04; // skip very top edge
+        } else {
+          // Dani: portrait selfie — face/sunglasses/smile are in lower 60%
+          // shift crop down to show sunglasses + big smile, skip excess hair
+          sx = (iw - sq) / 2;
+          sy = (ih - sq) * 0.42; // ~y=175 of 912, shows forehead→smile
+        }
+
+        const inset = 5;
+        ctx.save();
+        ctx.beginPath();
+        ctx.roundRect(hrx+inset, hry+inset, hr-inset*2, hr-inset*2, 12);
+        ctx.clip();
+        ctx.drawImage(img, sx, sy, sq, sq, hrx+inset, hry+inset, hr-inset*2, hr-inset*2);
+        ctx.restore();
+
+        // Name label below head
+        ctx.fillStyle = "rgba(0,0,0,0.55)";
+        ctx.beginPath();
+        ctx.roundRect(hrx+4, hry+hr-18, hr-8, 16, 5);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.font = "bold 11px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(isJay ? "JAY" : "DANI", hrx+hr/2, hry+hr-10);
+      } else {
+        // Fallback: letter
+        ctx.fillStyle = "rgba(255,255,255,0.95)";
+        ctx.font = "bold 26px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText(snake.label, hrx+hr/2, hry+hr/2+1);
+      }
+
+      ctx.restore();
+    }
+
+    _drawHUD(ctx) {
+      ctx.save();
+      const pad = 12, bw = 500, bh = 74;
+      ctx.fillStyle = "rgba(0,0,0,0.42)";
+      ctx.beginPath();
+      ctx.roundRect(pad, pad, bw, bh, 10);
+      ctx.fill();
+
+      ctx.font = "bold 17px system-ui, sans-serif";
+      ctx.textBaseline = "top"; ctx.textAlign = "left";
+      ctx.fillStyle = "rgba(255,255,255,0.95)";
+      ctx.fillText("Scores", pad+10, pad+7);
+
+      // Jay score (blue)
+      ctx.font = "600 13.5px system-ui, sans-serif";
+      ctx.fillStyle = "#4af";
+      ctx.fillText(`🐍 Jay: ${this.jay.score}  (best: ${this.highJay})`, pad+10, pad+32);
+      // Dani score (orange)
+      ctx.fillStyle = "#fa6";
+      ctx.fillText(`🐍 Dani: ${this.dani.score}  (best: ${this.highDani})`, pad+10, pad+52);
+
+      // Right-side info
+      ctx.textAlign = "right";
+      ctx.fillStyle = "rgba(255,255,255,0.55)";
+      ctx.font = "500 11px system-ui, sans-serif";
+      const mName = this.mode==="two_player"?"2P":this.mode==="single_jay"?"1P:Jay":"1P:Dani";
+      const sName = this.speedLevel==="super"?"⚡Fast":this.speedLevel==="stoned"?"🌿Slow":"🎯Med";
+      ctx.fillText(`${mName} · ${sName} · Rita: Psycho`, pad+bw-8, pad+32);
+      ctx.fillText("P pause · R restart", pad+bw-8, pad+52);
+
+      ctx.restore();
+    }
+  }
+
+  // =====================================================================
+  // CANVAS ROUNDRECT POLYFILL
+  // =====================================================================
+  if (!CanvasRenderingContext2D.prototype.roundRect) {
+    CanvasRenderingContext2D.prototype.roundRect = function(x, y, w, h, r) {
+      const R = typeof r==="number" ? {tl:r,tr:r,br:r,bl:r} : r;
+      this.moveTo(x+R.tl, y);
+      this.lineTo(x+w-R.tr, y);
+      this.quadraticCurveTo(x+w, y, x+w, y+R.tr);
+      this.lineTo(x+w, y+h-R.br);
+      this.quadraticCurveTo(x+w, y+h, x+w-R.br, y+h);
+      this.lineTo(x+R.bl, y+h);
+      this.quadraticCurveTo(x, y+h, x, y+h-R.bl);
+      this.lineTo(x, y+R.tl);
+      this.quadraticCurveTo(x, y, x+R.tl, y);
+      this.closePath();
+      return this;
+    };
+  }
+
+  // =====================================================================
+  // RESPONSIVE SCALING
+  // =====================================================================
+  function applyScale() {
+    const stage = document.getElementById("stage");
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    // Uniform scale: fit inside viewport maintaining aspect ratio (letterbox on narrow windows)
+    const scale = Math.min(vw / CANVAS_W, vh / CANVAS_H);
+    const left  = Math.floor((vw - CANVAS_W * scale) / 2);
+    const top   = Math.floor((vh - CANVAS_H * scale) / 2);
+    stage.style.transform = `scale(${scale})`;
+    stage.style.left = `${left}px`;
+    stage.style.top  = `${top}px`;
+  }
+  window.addEventListener("resize", applyScale);
+  applyScale();
+
+  // =====================================================================
+  // DOM WIRES
+  // =====================================================================
+  const canvas          = document.getElementById("game");
+  const ctx             = canvas.getContext("2d", { alpha:false });
+  const ritaAlert       = document.getElementById("ritaAlert");
+  const menuOverlay     = document.getElementById("menuOverlay");
+  const menuStart       = document.getElementById("menuStart");
+  const menuHow         = document.getElementById("menuHow");
+  const menuHint        = document.getElementById("menuHint");
+  const speedSelect     = document.getElementById("speedLevel");
+  const gameOverOverlay = document.getElementById("gameOverOverlay");
+  const restartBtn      = document.getElementById("restartBtn");
+  const goMenu          = document.getElementById("goMenu");
+  const winnerLine      = document.getElementById("winnerLine");
+  const jayScoreEnd     = document.getElementById("jayScoreEnd");
+  const daniScoreEnd    = document.getElementById("daniScoreEnd");
+  const jayHighEnd      = document.getElementById("jayHighEnd");
+  const daniHighEnd     = document.getElementById("daniHighEnd");
+
+  function getMode()  { const el = document.querySelector('input[name="mode"]:checked'); return el ? el.value : "single_jay"; }
+  function showMenu(on)    { menuOverlay.classList.toggle("hidden", !on); }
+  function showGameOver(on){ gameOverOverlay.classList.toggle("hidden", !on); }
+
+  function updateGameOverUI(game) {
+    const info = game.gameOverInfo || {};
+    const w = info.winner;
+    const r = info.ritaKilled || {};
+    if (r.jay && r.dani)       winnerLine.textContent = "😱 Oh no! Rita caught everyone! The fun is over!";
+    else if (r.jay)            winnerLine.textContent = "😱 Oh no! Rita caught Jay! The fun is over! Dani wins! 🏆";
+    else if (r.dani)           winnerLine.textContent = "😱 Oh no! Rita caught Dani! The fun is over! Jay wins! 🏆";
+    else if (w==="draw")       winnerLine.textContent = "🌟 Jay and Dani both got too high and crashed! 🌟";
+    else if (w==="jay")        winnerLine.textContent = "⭐ Dani got too high and crashed! Jay wins! 🏆";
+    else if (w==="dani")       winnerLine.textContent = "⭐ Jay got too high and crashed! Dani wins! 🏆";
+    else                       winnerLine.textContent = "Game Over";
+    jayScoreEnd.textContent  = String(game.jay.score);
+    daniScoreEnd.textContent = String(game.dani.score);
+    jayHighEnd.textContent   = String(game.highJay);
+    daniHighEnd.textContent  = String(game.highDani);
+  }
+
+  // =====================================================================
+  // BOOTSTRAP
+  // =====================================================================
+  (async function boot() {
+    const audio = new AudioSystem();
+
+    const [map, jay, dani] = await Promise.all([
+      loadOptionalImage("img/margit-map.jpg"),
+      loadOptionalImage("img/jay.jpg"),
+      loadOptionalImage("img/dani.jpg"),
+    ]);
+
+    const assets = { map, jay, dani };
+    const game = new Game(canvas, ctx, assets, audio);
+    game.setSpeedLevel(speedSelect.value);
+
+    showMenu(true);
+    showGameOver(false);
+
+    // ---- MENU & GAME OVER BUTTONS ----
+    speedSelect.addEventListener("change", () => game.setSpeedLevel(speedSelect.value));
+
+    menuStart.addEventListener("click", () => {
+      audio.init();
+      game.setMode(getMode()); game.setSpeedLevel(speedSelect.value);
+      showMenu(false); showGameOver(false);
+      game.startGame();
+    });
+
+    menuHow.addEventListener("click", () => {
+      menuHint.textContent = "Pick mode + speed → Space/Enter or Start button. P pauses. R restarts.";
+      setTimeout(() => { menuHint.textContent = "Tap/click the game or press Space/Enter to start."; }, 4500);
+    });
+
+    document.getElementById("modeList").addEventListener("change", () => game.setMode(getMode()));
+
+    restartBtn.addEventListener("click", () => {
+      audio.init(); showGameOver(false); showMenu(false); game.restart();
+    });
+    goMenu.addEventListener("click", () => {
+      showGameOver(false); showMenu(true); game.backToMenu();
+    });
+
+    // ---- KEYBOARD ----
+    window.addEventListener("keydown", (e) => {
+      const prevent = ["ArrowUp","ArrowDown","ArrowLeft","ArrowRight","Space"];
+      if (prevent.includes(e.code)) e.preventDefault();
+
+      if (game.state==="menu" && (e.code==="Space"||e.code==="Enter")) {
+        audio.init(); game.setMode(getMode()); game.setSpeedLevel(speedSelect.value);
+        showMenu(false); showGameOver(false); game.startGame(); return;
+      }
+      if (game.state==="gameover" && e.code==="KeyR") {
+        audio.init(); showGameOver(false); showMenu(false); game.restart(); return;
+      }
+      game.onKeyDown(e);
+    }, { passive:false });
+
+    // ---- POINTER (desktop canvas click) ----
+    canvas.addEventListener("pointerdown", (e) => {
+      audio.init(); game.onPointerDown();
+      if (game.state==="menu") {
+        game.setMode(getMode()); game.setSpeedLevel(speedSelect.value);
+        showMenu(false); showGameOver(false); game.startGame();
+      }
+    });
+
+    // ---- OVERLAY SYNC ----
+    const syncOverlays = () => {
+      if (game.state==="menu") { showMenu(true); showGameOver(false); }
+      else if (game.state==="gameover") { showMenu(false); showGameOver(true); }
+      else { showMenu(false); showGameOver(false); }
+      requestAnimationFrame(syncOverlays);
+    };
+    syncOverlays();
+
+    game.updateFrame();
+  })();
+})();
+</script>
+<div style="position:fixed;bottom:6px;right:10px;z-index:200;font-size:11px;opacity:0.4;pointer-events:auto;">
+  <a href="mobile.html" style="color:#a9b1d6;text-decoration:none;">📱 Mobile version</a>
+</div>
+</body>
+</html>

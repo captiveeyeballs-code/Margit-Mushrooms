@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Margit Mushroom Adventures! 🐍</title>
+  <style>
+    html, body {
+      margin: 0; height: 100%;
+      background: #050812;
+      display: flex; align-items: center; justify-content: center;
+      font-family: system-ui, -apple-system, sans-serif;
+      color: #a9b1d6;
+    }
+    a { color: #a9b1d6; }
+  </style>
+  <script>
+    (function () {
+      var isMobile = (
+        ('ontouchstart' in window || navigator.maxTouchPoints > 0) &&
+        window.innerWidth < 1024
+      );
+      window.location.replace(isMobile ? 'mobile.html' : 'desktop.html');
+    })();
+  </script>
+</head>
+<body>
+  <!-- Shown only if JS is disabled -->
+  <p>
+    <a href="desktop.html">🖥 Desktop version</a>
+    &nbsp;·&nbsp;
+    <a href="mobile.html">📱 Mobile version</a>
+  </p>
+</body>
+</html>

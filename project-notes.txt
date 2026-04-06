@@ -1,0 +1,54 @@
+# Project Notes: Margit Island Snake Game
+
+## Overview
+A chaotic two-player snake game set on Margit Island. Two snakes (Jay and Dani) compete to eat mushrooms while dodging Rita, an animated hazard character who storms across the screen dropping poop trails.
+
+## Files & Location
+- **Folder:** `~/Desktop/margit snake`
+- **Entry point:** `index.html` (routes to desktop or mobile version)
+- **Desktop game:** `desktop.html`
+- **Mobile game:** `mobile.html`
+- **Legacy version:** `margit-snake.html`
+- **Assets:** `img/` folder (margit-map.jpg, jay.jpg, dani.jpg)
+
+## Deployment
+- **Platform:** Netlify (free tier)
+- **Live URL (public):** https://margitmushrooms.netlify.app
+- **Dashboard:** https://app.netlify.com/projects/margitmushrooms/overview
+- **How to deploy:** Drag the entire `margit snake` folder onto [app.netlify.com](https://app.netlify.com)
+- **Note:** Deploying costs build minutes; players using the link only use bandwidth (100GB/month free — plenty for a snake game)
+
+## Characters & Controls
+| Character | Role | Controls |
+|-----------|------|----------|
+| Jay | Blue snake (human or AI) | Arrow keys / swipe |
+| Dani | Orange snake (human or AI) | WASD |
+| Rita | Hazard — crosses screen every 15s, drops 💩 | N/A |
+
+## Game Modes
+- Single Player: Jay (Dani is AI)
+- Single Player: Dani (Jay is AI)
+- Two Player (keyboard only; swipe controls Jay on mobile)
+
+## Speed Settings
+- Stoned: 7 Hz | High: 10 Hz | Super High: 14 Hz
+
+## What's Been Done
+- Pixel-art animated Rita sprite (4-frame walk cycle)
+- 60px cropped face portraits for snake heads (with glow)
+- Web Audio API sound effects (no external files)
+- Mobile support: swipe on canvas + on-screen D-pad
+- Responsive canvas (scales to any screen)
+- AI avoids poop locations during pathfinding
+- High scores saved in browser localStorage
+- Separated desktop.html and mobile.html from main index.html
+
+## Last Modified
+- `mobile.html` — Apr 5, 2026
+- `desktop.html` — Apr 3, 2026
+
+## Ideas / Next Steps
+*(add future features or bugs to fix here)*
+
+---
+*Notes file created Apr 5, 2026*
