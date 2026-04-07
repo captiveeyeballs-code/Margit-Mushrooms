@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
   <title>Margit Mushroom Adventures! 🍄 — Mobile</title>
   <style>
-    :root { --w:380px; --h:820px; --text:#eef2ff; --muted:#a9b1d6; }
+    :root { --w:400px; --h:820px; --text:#eef2ff; --muted:#a9b1d6; }
     *, *::before, *::after { box-sizing: border-box; }
     html, body {
       height: 100%; margin: 0; overflow: hidden;
@@ -130,7 +130,7 @@
 <body>
 <div class="wrap" id="wrap">
   <div class="stage" id="stage">
-    <canvas id="game" width="380" height="820"></canvas>
+    <canvas id="game" width="400" height="820"></canvas>
 
     <!-- Rita warning banner -->
     <div id="ritaAlert" class="rita-alert">🚨 Rita is looking for us!! 🚨</div>
@@ -223,11 +223,11 @@
   // =====================================================================
   // CONFIG
   // =====================================================================
-  const CANVAS_W = 380;
+  const CANVAS_W = 400;
   const CANVAS_H = 820;
-  const CELL = 20;
-  const GRID_W = CANVAS_W / CELL; // 19
-  const GRID_H = CANVAS_H / CELL; // 41
+  const CELL = 16;
+  const GRID_W = Math.floor(CANVAS_W / CELL); // 25
+  const GRID_H = Math.floor(CANVAS_H / CELL); // 51
 
   const RITA_SPAWN_INTERVAL = 15.0;
   const MUSHROOM_COUNT_DEFAULT = 2;  // 2 mushrooms on screen at once
@@ -1395,7 +1395,7 @@
       ctx.save();
 
       const isJay = snake.id === "jay";
-      const headRenderSize = CELL * 3; // 60px — big visible head
+      const headRenderSize = 60; // fixed 60px — big visible head, independent of cell size
       const h = snake.head();
       const hPx = h.x * CELL, hPy = h.y * CELL;
 
@@ -1623,9 +1623,9 @@
     const audio = new AudioSystem();
 
     const [map, jay, dani] = await Promise.all([
-      loadOptionalImage("img/margit-map.jpg"),
-      loadOptionalImage("img/jay.jpg"),
-      loadOptionalImage("img/dani.jpg"),
+      loadOptionalImage("margit-map.jpg"),
+      loadOptionalImage("jay.jpg"),
+      loadOptionalImage("dani.jpg"),
     ]);
 
     const assets = { map, jay, dani };
@@ -1773,7 +1773,7 @@
 })();
 </script>
 <div style="position:fixed;bottom:6px;right:10px;z-index:200;font-size:11px;opacity:0.4;pointer-events:auto;">
-  <a href='/desktop' style='color:#a9b1d6;text-decoration:none;'>🖥 Desktop version</a>
+  <a href="desktop.html" style="color:#a9b1d6;text-decoration:none;">🖥 Desktop version</a>
 </div>
 </body>
 </html>
