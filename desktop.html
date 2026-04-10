@@ -629,7 +629,7 @@
       this.y += this.vy * dt;
       // Animate: 8 fps → 4 frames cycle
       this.animTimer += dt;
-      if (this.animTimer >= 0.125) { this.animTimer -= 0.125; this.animFrame = (this.animFrame + 1) % 4; }
+      if (this.animTimer >= 0.125) { this.animTimer -= 0.125; this.animFrame = (this.animFrame + 1) % 3; }
       const m = 6;
       if (this.x < -this.w-m || this.x > CANVAS_W+m || this.y < -this.h-m || this.y > CANVAS_H+m) {
         this.active = false;
@@ -793,76 +793,37 @@
   }
 
   // =====================================================================
-  // RITA SPRITE RENDERER (programmatic pixel-art)
+  // RITA SPRITE RENDERER
   // =====================================================================
-  // drawRitaSprite — pixel-art angry girl, 40×40px hitbox (P=2.5, 16×16 logical grid)
-  function drawRitaSprite(ctx, x, y, frame) {
-    // frame 0-3: walking animation cycle
-    const bounce = (frame & 1) ? -2 : 0;   // head/body bobs 2px on odd frames
-    const stride = frame % 4;              // 0=neutral, 1=stride-L, 2=neutral, 3=stride-R
+  // drawRitaSprite — uses Rita.png sprite sheet (3 frames, 512×1024 each)
+  function drawRitaSprite(ctx, ritaAsset, x, y, w, h, frame, vx) {
+    const DISP_W = 64, DISP_H = 128;
+    const dx = x - (DISP_W - w) / 2;
+    const dy = y - (DISP_H - h) / 2;
 
-    const hair  = '#0d0608';  // very dark brown-black
-    const skin  = '#c87240';  // warm skin tone
-    const cloth = '#1a1232';  // dark navy-purple
-    const eye   = '#cc1818';  // angry red eyes
-    const mouth = '#7a2c18';  // dark frown
-    const boot  = '#080810';  // near-black boots
-
-    // P=2.5 → 16 logical units = 40px exactly
-    const P = 2.5;
-    const R = (lx, ly, lw, lh, color) => {
-      ctx.fillStyle = color;
-      ctx.fillRect(x + lx*P, y + ly*P + bounce, lw*P, lh*P);
-    };
-
-    ctx.save();
-    ctx.shadowColor = 'rgba(220,60,60,0.45)';
-    ctx.shadowBlur = 12;
-
-    // ---- HAIR: rows 0-9 ----
-    R(3,  0,  10, 2,  hair);   // top crown
-    R(2,  1,  12, 5,  hair);   // main hair mass
-    R(0,  3,  3,  6,  hair);   // left side drape
-    R(13, 3,  3,  6,  hair);   // right side drape
-
-    // ---- FACE: rows 2-8 (behind hair sides) ----
-    R(3,  2,  10, 7,  skin);   // face rectangle
-
-    // ---- ANGRY BROWS ----
-    R(3,  3,  3,  1,  hair);   // left brow (inner higher = V shape)
-    R(10, 3,  3,  1,  hair);   // right brow
-    R(3,  2,  2,  1,  hair);   // left outer lower
-    R(11, 2,  2,  1,  hair);   // right outer lower
-
-    // ---- EYES (red angry slits) ----
-    R(3,  5,  3,  1,  eye);    // left eye
-    R(10, 5,  3,  1,  eye);    // right eye
-
-    // ---- FROWN ----
-    R(5,  8,  6,  1,  mouth);  // frown base
-    R(3,  7,  2,  1,  mouth);  // left corner drooping
-    R(11, 7,  2,  1,  mouth);  // right corner drooping
-
-    // ---- NECK: rows 9-9 ----
-    R(5,  9,  6,  1,  skin);
-
-    // ---- TORSO + ARMS: rows 10-12 ----
-    R(0,  10, 16, 3,  cloth);  // full-width torso+arms block
-    R(3,  10, 10, 3,  cloth);  // chest (slightly lighter shade handled by flat color)
-
-    // ---- LEGS (animated): rows 13-14 ----
-    let lx = 4, rx = 9;
-    if (stride === 1) { lx = 3; rx = 10; }
-    else if (stride === 3) { lx = 5; rx = 8; }
-
-    R(lx,   13, 3, 2, cloth);  // left leg
-    R(rx,   13, 3, 2, cloth);  // right leg
-
-    // ---- BOOTS: row 15 ----
-    R(lx-1, 15, 5, 1, boot);   // left boot
-    R(rx-1, 15, 5, 1, boot);   // right boot
-
-    ctx.restore();
+    if (ritaAsset && ritaAsset.ok) {
+      const img = ritaAsset.img;
+      const frameW = Math.floor(img.naturalWidth / 3);
+      const sx = frame * frameW;
+      ctx.save();
+      if (vx < 0) {
+        ctx.translate(dx + DISP_W, dy);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, sx, 0, frameW, img.naturalHeight, 0, 0, DISP_W, DISP_H);
+      } else {
+        ctx.drawImage(img, sx, 0, frameW, img.naturalHeight, dx, dy, DISP_W, DISP_H);
+      }
+      ctx.restore();
+    } else {
+      // Fallback if image failed to load
+      ctx.fillStyle = '#cc2222';
+      ctx.fillRect(x, y, w, h);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 12px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('R', x + w/2, y + h/2);
+    }
   }
 
   // =====================================================================
@@ -1375,7 +1336,7 @@
       // Add shadow behind Rita for depth
       ctx.shadowColor = "rgba(220,60,60,0.55)";
       ctx.shadowBlur = 18;
-      drawRitaSprite(ctx, rr.x, rr.y, this.rita.animFrame);
+      drawRitaSprite(ctx, this.assets.rita, rr.x, rr.y, rr.w, rr.h, this.rita.animFrame, this.rita.vx);
       ctx.restore();
 
       // Danger warning box (subtle)
@@ -1640,13 +1601,14 @@
   (async function boot() {
     const audio = new AudioSystem();
 
-    const [map, jay, dani] = await Promise.all([
+    const [map, jay, dani, rita] = await Promise.all([
       loadOptionalImage("margit-map.jpg"),
       loadOptionalImage("jay.jpg"),
       loadOptionalImage("dani.jpg"),
+      loadOptionalImage("rita.png"),
     ]);
 
-    const assets = { map, jay, dani };
+    const assets = { map, jay, dani, rita };
     const game = new Game(canvas, ctx, assets, audio);
     game.setSpeedLevel(speedSelect.value);
 
