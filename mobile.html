@@ -1316,14 +1316,6 @@
       ctx.shadowBlur = 18;
       drawRitaSprite(ctx, this.assets.rita, rr.x, rr.y, rr.w, rr.h, this.rita.animFrame, this.rita.vx);
       ctx.restore();
-
-      // Danger warning box (subtle)
-      ctx.save();
-      ctx.strokeStyle = "rgba(255,80,80,0.4)";
-      ctx.lineWidth = 1.5;
-      ctx.setLineDash([4,4]);
-      ctx.strokeRect(rr.x-2, rr.y-2, rr.w+4, rr.h+4);
-      ctx.restore();
     }
 
     _drawPoops(ctx) {
