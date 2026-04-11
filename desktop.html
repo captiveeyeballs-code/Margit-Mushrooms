@@ -948,7 +948,7 @@
   }
 
   function drawChipySprite(ctx, chipyAsset, x, y, w, h, frame, vx) {
-    const DISP_W = 64, DISP_H = 128;
+    const DISP_W = 96, DISP_H = 64; // 3:2 ratio to match sprite dimensions
     const dx = x - (DISP_W - w) / 2;
     const dy = y - (DISP_H - h) / 2;
 
@@ -1340,7 +1340,8 @@
         if (!cake.active) continue;
         for (const snake of [this.jay, this.dani]) {
           const head = snake.head();
-          if (head.x === cake.x && head.y === cake.y) {
+          // Use key-based comparison like mushrooms for reliability
+          if (key2(head.x, head.y) === key2(cake.x, cake.y)) {
             // Snake ate cake: lose half tail, keep points
             const newLen = Math.floor(snake.body.length / 2);
             if (newLen < 1) snake.body = [snake.head()];
@@ -1584,7 +1585,8 @@
       if (!this.cakes.length) return;
       ctx.save();
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = "24px system-ui";
+      ctx.font = "28px system-ui";
+      ctx.fillStyle = "rgba(255,255,255,0.95)"; // Bright white
       for (const cake of this.cakes) {
         if (!cake.active) continue;
         // Draw cake at grid coordinates
