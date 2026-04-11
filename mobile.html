@@ -916,7 +916,7 @@
     }
   }
 
-  function drawChipySprite(ctx, chipyAsset, x, y, w, h, frame, vx) {
+  function drawChipySprite(ctx, chipyAsset, x, y, w, h, frame) {
     const DISP_W = 240, DISP_H = 160; // 3:2 ratio, large display size
     const dx = x - (DISP_W - w) / 2;
     const dy = y - (DISP_H - h) / 2;
@@ -924,13 +924,8 @@
     if (chipyAsset && chipyAsset.ok) {
       const img = chipyAsset.img;
       ctx.save();
-      if (vx > 0) {
-        ctx.translate(dx + DISP_W, dy);
-        ctx.scale(-1, 1);
-        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, 0, 0, DISP_W, DISP_H);
-      } else {
-        ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, DISP_W, DISP_H);
-      }
+      // No flipping needed - we have separate left/right sprites with readable text
+      ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight, dx, dy, DISP_W, DISP_H);
       ctx.restore();
     }
   }
@@ -1534,12 +1529,14 @@
       ctx.save();
       ctx.shadowColor = "rgba(100,200,255,0.5)";
       ctx.shadowBlur = 15;
-      if (this.assets.chipy && this.assets.chipy.ok) {
-        drawChipySprite(ctx, this.assets.chipy, cr.x, cr.y, cr.w, cr.h, this.chipy.animFrame, this.chipy.vx);
+      // Use left or right sprite based on direction
+      const chipyAsset = this.chipy.vx > 0 ? this.assets.chipyRight : this.assets.chipyLeft;
+      if (chipyAsset && chipyAsset.ok) {
+        drawChipySprite(ctx, chipyAsset, cr.x, cr.y, cr.w, cr.h, this.chipy.animFrame);
       } else {
         ctx.textAlign = "center"; ctx.textBaseline = "middle";
         ctx.font = "48px system-ui";
-        ctx.fillText("🚗", cr.x + cr.w/2, cr.y + cr.h/2);
+        ctx.fillText("🚎", cr.x + cr.w/2, cr.y + cr.h/2);
       }
       ctx.restore();
     }
@@ -1841,15 +1838,16 @@
   (async function boot() {
     const audio = new AudioSystem();
 
-    const [map, jay, dani, rita, chipy] = await Promise.all([
+    const [map, jay, dani, rita, chipyLeft, chipyRight] = await Promise.all([
       loadOptionalImage("margit-map.jpg"),
       loadOptionalImage("jay.jpg"),
       loadOptionalImage("dani.jpg"),
       loadOptionalImage("rita.png"),
-      loadOptionalImage("chipy.png")
+      loadOptionalImage("chipy-left.png"),
+      loadOptionalImage("chipy-right.png")
     ]);
 
-    const assets = { map, jay, dani, rita, chipy };
+    const assets = { map, jay, dani, rita, chipyLeft, chipyRight };
     const game = new Game(canvas, ctx, assets, audio);
     game.setSpeedLevel(speedSelect.value);
 
