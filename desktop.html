@@ -51,6 +51,23 @@
       from { opacity: 1;   transform: scale(1); }
       to   { opacity: 0.6; transform: scale(1.04); }
     }
+    .chipy-alert {
+      display: none;
+      position: absolute; top: 25%; left: 0; right: 0;
+      text-align: center; font-size: 32px; font-weight: 900;
+      color: #3399ff;
+      background: rgba(0,0,0,0.55);
+      padding: 12px 0;
+      letter-spacing: 0.02em;
+      text-shadow: 0 0 20px #0066ff, 0 2px 8px rgba(0,0,0,1);
+      pointer-events: none; z-index: 20;
+      animation: chipyPulse 0.45s ease-in-out infinite alternate;
+    }
+    .chipy-alert.visible { display: block; }
+    @keyframes chipyPulse {
+      from { opacity: 1;   transform: scale(1); }
+      to   { opacity: 0.6; transform: scale(1.04); }
+    }
 
     /* Overlays */
     .overlay {
@@ -145,6 +162,7 @@
 
     <div class="hudHelp" id="hudHelp">Arrow keys (Jay) · WASD (Dani) · P pause · R restart</div>
     <div id="ritaAlert" class="rita-alert">🚨 Rita is looking for us!! 🚨</div>
+    <div id="chipyAlert" class="chipy-alert">🍰 Chipy made a cake! 🍰</div>
 
     <!-- MENU OVERLAY -->
     <div id="menuOverlay" class="overlay">
@@ -538,6 +556,34 @@
       oCrunch.connect(lpCrunch); lpCrunch.connect(gCrunch); gCrunch.connect(this.master);
       oCrunch.start(t + 0.04); oCrunch.stop(t + 0.45);
     }
+
+    // Positive chime — cake truck arrival (cheerful ice cream jingle)
+    positiveChime() {
+      if (!this._ok()) return;
+      const t = this.ctx.currentTime;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.42, t+0.03);
+      g.gain.exponentialRampToValueAtTime(0.0001, t+0.8);
+
+      const notes = [
+        { freq: 1175, start: 0, dur: 0.18 },     // G5
+        { freq: 1397, start: 0.15, dur: 0.18 },  // F5
+        { freq: 1568, start: 0.30, dur: 0.25 },  // G5
+        { freq: 1760, start: 0.58, dur: 0.22 }   // A5
+      ];
+
+      notes.forEach(note => {
+        const o = this.ctx.createOscillator();
+        o.type = "sine";
+        o.frequency.setValueAtTime(note.freq, t + note.start);
+        o.connect(g);
+        o.start(t + note.start);
+        o.stop(t + note.start + note.dur);
+      });
+
+      g.connect(this.master);
+    }
   }
 
   // =====================================================================
@@ -667,6 +713,81 @@
       if (nowT < this.fadeStart) return 1;
       const t = (nowT - this.fadeStart) / Math.max(0.0001, this.fadeSeconds);
       return clamp(1 - t, 0, 1);
+    }
+  }
+
+  // =====================================================================
+  // CHIPY
+  // =====================================================================
+  class Chipy {
+    constructor() {
+      this.active = false;
+      this.x = 0; this.y = 0;
+      this.vx = 0; this.vy = 0;
+      this.w = CELL * 2; this.h = CELL * 2;
+      this.speed = 200;
+      this.life = 0;
+      this.animFrame = 0;
+      this.animTimer = 0;
+    }
+    setSpeed(pxPerSec) { this.speed = pxPerSec; }
+
+    spawn(rng) {
+      const edge = rng.int(0, 3);
+      const gx = rng.int(0, GRID_W - 2) * CELL;
+      const gy = rng.int(0, GRID_H - 2) * CELL;
+      let x, y, ang;
+      if (edge === 0)      { x = -this.w;      y = gy; ang = (rng.next()*(Math.PI/2))-(Math.PI/4); }
+      else if (edge === 1) { x = CANVAS_W;     y = gy; ang = Math.PI+(rng.next()*(Math.PI/2))-(Math.PI/4); }
+      else if (edge === 2) { x = gx; y = -this.h;      ang = (Math.PI/2)+(rng.next()*(Math.PI/2))-(Math.PI/4); }
+      else                 { x = gx; y = CANVAS_H;     ang = (-Math.PI/2)+(rng.next()*(Math.PI/2))-(Math.PI/4); }
+      this.x = x; this.y = y;
+      this.vx = Math.cos(ang)*this.speed;
+      this.vy = Math.sin(ang)*this.speed;
+      this.active = true;
+      this.life = 0;
+      this.animFrame = 0; this.animTimer = 0;
+    }
+
+    update(dt) {
+      if (!this.active) return;
+      this.life += dt;
+      this.x += this.vx * dt;
+      this.y += this.vy * dt;
+      this.animTimer += dt;
+      if (this.animTimer >= 0.125) { this.animTimer -= 0.125; this.animFrame = (this.animFrame + 1) % 3; }
+      const m = 6;
+      if (this.x < -this.w-m || this.x > CANVAS_W+m || this.y < -this.h-m || this.y > CANVAS_H+m) {
+        this.active = false;
+      }
+    }
+    rect() { return { x:this.x, y:this.y, w:this.w, h:this.h }; }
+  }
+
+  // =====================================================================
+  // CAKE
+  // =====================================================================
+  class Cake {
+    constructor() {
+      this.active = false;
+      this.x = 0; this.y = 0;
+      this.spawnT = 0;
+      this.despawnAt = Infinity;
+    }
+    spawn(gx, gy, nowT) {
+      this.active = true;
+      this.x = gx;
+      this.y = gy;
+      this.spawnT = nowT;
+      this.despawnAt = nowT + 10;
+    }
+    update(nowT) {
+      if (!this.active) return;
+      if (nowT >= this.despawnAt) this.active = false;
+    }
+    rect() {
+      const size = CELL;
+      return { x: this.x - size/2, y: this.y - size/2, w: size, h: size };
     }
   }
 
@@ -826,6 +947,27 @@
     }
   }
 
+  function drawChipySprite(ctx, chipyAsset, x, y, w, h, frame, vx) {
+    const DISP_W = 64, DISP_H = 128;
+    const dx = x - (DISP_W - w) / 2;
+    const dy = y - (DISP_H - h) / 2;
+
+    if (chipyAsset && chipyAsset.ok) {
+      const img = chipyAsset.img;
+      const frameW = Math.floor(img.naturalWidth / 3);
+      const sx = frame * frameW;
+      ctx.save();
+      if (vx > 0) {
+        ctx.translate(dx + DISP_W, dy);
+        ctx.scale(-1, 1);
+        ctx.drawImage(img, sx, 0, frameW, img.naturalHeight, 0, 0, DISP_W, DISP_H);
+      } else {
+        ctx.drawImage(img, sx, 0, frameW, img.naturalHeight, dx, dy, DISP_W, DISP_H);
+      }
+      ctx.restore();
+    }
+  }
+
   // =====================================================================
   // GAME
   // =====================================================================
@@ -853,6 +995,12 @@
       this.ritaTimer = 0;
       this.poops = [];
       this.prevRitaActive = false;
+
+      this.chipy = new Chipy();
+      this.chipyTimer = 0;
+      this.chipySpawnWindow = 0;
+      this.cakes = [];
+      this.chipyNotifTime = -1;
 
       this.ai = new SnakeAI();
 
@@ -884,6 +1032,7 @@
       const hz = this.speedLevel==="super" ? 14 : this.speedLevel==="stoned" ? 7 : 10;
       this.tickHz = hz; this.tickDt = 1/hz; this.snakePxSpeed = hz*CELL;
       this.rita.setSpeed((this.snakePxSpeed*0.5)*2.6);
+      this.chipy.setSpeed((this.snakePxSpeed*0.5)*2.6);
     }
 
     // Returns the tick interval (seconds) for a given snake.
@@ -977,7 +1126,52 @@
           const showAlert = this.rita.active && this.rita.life < 2.5;
           ritaAlert.classList.toggle("visible", showAlert);
 
+          // Chipy notification: show for ~3 seconds when Chipy appears
+          const chipyShowAlert = nowSec() - this.chipyNotifTime < 3;
+          chipyAlert.classList.toggle("visible", chipyShowAlert);
+
           this._updatePoops(nowSec());
+
+          // Chipy spawn logic: triggered when any snake has 8+ cells
+          const maxSnakeLen = Math.max(this.jay.body.length, this.dani.body.length);
+          const chipyTriggered = maxSnakeLen >= 8;
+
+          if (chipyTriggered && this.chipySpawnWindow === 0) {
+            // Start a new 30-second spawn window
+            this.chipySpawnWindow = 30 + this.rng.next() * 2; // 30-32 seconds
+            this.chipyTimer = 0;
+          }
+
+          if (this.chipySpawnWindow > 0) {
+            this.chipyTimer += dt;
+            this.chipySpawnWindow -= dt;
+
+            // Randomly spawn Chipy within the window
+            if (!this.chipy.active && this.chipyTimer >= this.chipySpawnWindow - 1 && this.rng.next() < 0.15) {
+              this.chipy.spawn(this.rng);
+              // Drop a cake at random location
+              const cakeX = this.rng.int(2, GRID_W - 2) * CELL;
+              const cakeY = this.rng.int(2, GRID_H - 2) * CELL;
+              const cake = new Cake();
+              cake.spawn(cakeX, cakeY, nowSec());
+              this.cakes.push(cake);
+              this.chipyNotifTime = nowSec(); // Show notification
+              this.audio.positiveChime(); // Play sound (placeholder)
+            }
+          } else {
+            this.chipySpawnWindow = 0;
+            this.chipyTimer = 0;
+          }
+
+          if (this.chipy.active) {
+            this.chipy.update(dt);
+          }
+
+          // Update cakes
+          for (let i = this.cakes.length - 1; i >= 0; i--) {
+            this.cakes[i].update(nowSec());
+            if (!this.cakes[i].active) this.cakes.splice(i, 1);
+          }
 
           this.jayAcc += dt;
           this.daniAcc += dt;
@@ -1128,8 +1322,46 @@
       }
 
       if (this._handlePoopHits()) return;
+      this._handleChipyHits();
+      this._handleCakeEats();
       this._handleMushroomEats();
       this._ensureMushrooms();
+    }
+
+    _handleChipyHits() {
+      if (!this.chipy.active) return;
+      const chipyRect = this.chipy.rect();
+      for (const snake of [this.jay, this.dani]) {
+        const head = snake.head();
+        if (head.x >= chipyRect.x && head.x < chipyRect.x + chipyRect.w &&
+            head.y >= chipyRect.y && head.y < chipyRect.y + chipyRect.h) {
+          // Snake hit Chipy: lose 1 cell
+          if (snake.body.length > 1) {
+            snake.body.pop();
+          }
+        }
+      }
+    }
+
+    _handleCakeEats() {
+      for (let i = this.cakes.length - 1; i >= 0; i--) {
+        const cake = this.cakes[i];
+        if (!cake.active) continue;
+        const cakeRect = cake.rect();
+        for (const snake of [this.jay, this.dani]) {
+          const head = snake.head();
+          if (head.x >= cakeRect.x && head.x < cakeRect.x + cakeRect.w &&
+              head.y >= cakeRect.y && head.y < cakeRect.y + cakeRect.h) {
+            // Snake ate cake: lose half tail, keep points
+            const newLen = Math.floor(snake.body.length / 2);
+            if (newLen < 1) snake.body = [snake.head()];
+            else snake.body = snake.body.slice(0, newLen);
+            cake.active = false;
+            this.cakes.splice(i, 1);
+            break;
+          }
+        }
+      }
     }
 
     _handlePoopHits() {
@@ -1264,6 +1496,8 @@
       this._drawMushrooms(ctx);
       this._drawPoops(ctx);
       this._drawRita(ctx);
+      this._drawChipy(ctx);
+      this._drawCakes(ctx);
       this._drawSnake(ctx, this.jay);
       this._drawSnake(ctx, this.dani);
       this._drawHUD(ctx);
@@ -1337,6 +1571,36 @@
       ctx.shadowColor = "rgba(220,60,60,0.55)";
       ctx.shadowBlur = 18;
       drawRitaSprite(ctx, this.assets.rita, rr.x, rr.y, rr.w, rr.h, this.rita.animFrame, this.rita.vx);
+      ctx.restore();
+    }
+
+    _drawChipy(ctx) {
+      if (!this.chipy.active) return;
+      const cr = this.chipy.rect();
+      ctx.save();
+      ctx.shadowColor = "rgba(100,200,255,0.5)";
+      ctx.shadowBlur = 15;
+      // Draw Chipy using sprite if available, otherwise emoji
+      if (this.assets.chipy && this.assets.chipy.ok) {
+        drawChipySprite(ctx, this.assets.chipy, cr.x, cr.y, cr.w, cr.h, this.chipy.animFrame, this.chipy.vx);
+      } else {
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.font = "48px system-ui";
+        ctx.fillText("🚗", cr.x + cr.w/2, cr.y + cr.h/2);
+      }
+      ctx.restore();
+    }
+
+    _drawCakes(ctx) {
+      if (!this.cakes.length) return;
+      ctx.save();
+      ctx.textAlign = "center"; ctx.textBaseline = "middle";
+      ctx.font = "24px system-ui";
+      for (const cake of this.cakes) {
+        if (!cake.active) continue;
+        const cr = cake.rect();
+        ctx.fillText("🍰", cr.x + cr.w/2, cr.y + cr.h/2);
+      }
       ctx.restore();
     }
 
@@ -1593,14 +1857,15 @@
   (async function boot() {
     const audio = new AudioSystem();
 
-    const [map, jay, dani, rita] = await Promise.all([
+    const [map, jay, dani, rita, chipy] = await Promise.all([
       loadOptionalImage("margit-map.jpg"),
       loadOptionalImage("jay.jpg"),
       loadOptionalImage("dani.jpg"),
-      loadOptionalImage("rita.png")
+      loadOptionalImage("rita.png"),
+      loadOptionalImage("chipy.png")
     ]);
 
-    const assets = { map, jay, dani, rita };
+    const assets = { map, jay, dani, rita, chipy };
     const game = new Game(canvas, ctx, assets, audio);
     game.setSpeedLevel(speedSelect.value);
 
