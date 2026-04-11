@@ -946,7 +946,6 @@
 
       this.chipy = new Chipy();
       this.chipyTimer = 0;
-      this.chipySpawnWindow = 0;
       this.cakes = [];
       this.chipyNotifTime = -1;
 
@@ -1081,34 +1080,27 @@
 
           this._updatePoops(nowSec());
 
-          // Chipy spawn logic: triggered when any snake has 8+ cells
+          // Chipy spawn logic: triggered when any snake has 8+ cells, but not if Rita is active
           const maxSnakeLen = Math.max(this.jay.body.length, this.dani.body.length);
           const chipyTriggered = maxSnakeLen >= 8;
 
-          if (chipyTriggered && this.chipySpawnWindow === 0) {
-            // Start a new 30-second spawn window
-            this.chipySpawnWindow = 30 + this.rng.next() * 2; // 30-32 seconds
-            this.chipyTimer = 0;
-          }
-
-          if (this.chipySpawnWindow > 0) {
+          if (chipyTriggered) {
             this.chipyTimer += dt;
-            this.chipySpawnWindow -= dt;
-
-            // Randomly spawn Chipy within the window
-            if (!this.chipy.active && this.chipyTimer >= this.chipySpawnWindow - 1 && this.rng.next() < 0.15) {
+            // Spawn Chipy every 35-40 seconds, but only if Rita is not active
+            if (!this.chipy.active && !this.rita.active && this.chipyTimer >= 35 + this.rng.next() * 5) {
+              this.chipyTimer = 0;
               this.chipy.spawn(this.rng);
-              // Drop a cake at random location
-              const cakeX = this.rng.int(2, GRID_W - 2) * CELL;
-              const cakeY = this.rng.int(2, GRID_H - 2) * CELL;
+              // Drop a cake at random grid location
+              const cakeGx = this.rng.int(2, GRID_W - 2);
+              const cakeGy = this.rng.int(2, GRID_H - 2);
               const cake = new Cake();
-              cake.spawn(cakeX, cakeY, nowSec());
+              cake.spawn(cakeGx, cakeGy, nowSec());
               this.cakes.push(cake);
               this.chipyNotifTime = nowSec(); // Show notification
-              this.audio.positiveChime(); // Play sound (placeholder)
+              this.audio.positiveChime();
             }
           } else {
-            this.chipySpawnWindow = 0;
+            // Reset timer if snakes drop below 8 cells
             this.chipyTimer = 0;
           }
 
@@ -1294,11 +1286,9 @@
       for (let i = this.cakes.length - 1; i >= 0; i--) {
         const cake = this.cakes[i];
         if (!cake.active) continue;
-        const cakeRect = cake.rect();
         for (const snake of [this.jay, this.dani]) {
           const head = snake.head();
-          if (head.x >= cakeRect.x && head.x < cakeRect.x + cakeRect.w &&
-              head.y >= cakeRect.y && head.y < cakeRect.y + cakeRect.h) {
+          if (head.x === cake.x && head.y === cake.y) {
             // Snake ate cake: lose half tail, keep points
             const newLen = Math.floor(snake.body.length / 2);
             if (newLen < 1) snake.body = [snake.head()];
@@ -1541,8 +1531,10 @@
       ctx.font = "24px system-ui";
       for (const cake of this.cakes) {
         if (!cake.active) continue;
-        const cr = cake.rect();
-        ctx.fillText("🍰", cr.x + cr.w/2, cr.y + cr.h/2);
+        // Draw cake at grid coordinates
+        const px = cake.x * CELL + CELL / 2;
+        const py = cake.y * CELL + CELL / 2;
+        ctx.fillText("🎂", px, py);
       }
       ctx.restore();
     }
