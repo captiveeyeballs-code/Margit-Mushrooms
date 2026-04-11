@@ -775,7 +775,7 @@
       const frameW = Math.floor(img.naturalWidth / 3);
       const sx = frame * frameW;
       ctx.save();
-      if (vx < 0) {
+      if (vx > 0) {
         ctx.translate(dx + DISP_W, dy);
         ctx.scale(-1, 1);
         ctx.drawImage(img, sx, 0, frameW, img.naturalHeight, 0, 0, DISP_W, DISP_H);
@@ -1587,7 +1587,7 @@
       loadOptionalImage("margit-map.jpg"),
       loadOptionalImage("jay.jpg"),
       loadOptionalImage("dani.jpg"),
-      loadOptionalImage("rita.png"),
+      loadOptionalImage("Rita.png")
     ]);
 
     const assets = { map, jay, dani, rita };
