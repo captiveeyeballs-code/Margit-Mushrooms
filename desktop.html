@@ -724,7 +724,7 @@
       this.active = false;
       this.x = 0; this.y = 0;
       this.vx = 0; this.vy = 0;
-      this.w = CELL * 2; this.h = CELL * 2;
+      this.w = CELL * 5; this.h = CELL * 5; // 5x bigger than Rita
       this.speed = 200;
       this.life = 0;
       this.animFrame = 0;
@@ -948,7 +948,7 @@
   }
 
   function drawChipySprite(ctx, chipyAsset, x, y, w, h, frame, vx) {
-    const DISP_W = 96, DISP_H = 64; // 3:2 ratio to match sprite dimensions
+    const DISP_W = 240, DISP_H = 160; // 3:2 ratio, large display size
     const dx = x - (DISP_W - w) / 2;
     const dy = y - (DISP_H - h) / 2;
 
@@ -1583,16 +1583,29 @@
 
     _drawCakes(ctx) {
       if (!this.cakes.length) return;
+      const now = nowSec();
       ctx.save();
       ctx.textAlign = "center"; ctx.textBaseline = "middle";
-      ctx.font = "28px system-ui";
-      ctx.fillStyle = "rgba(255,255,255,0.95)"; // Bright white
+
       for (const cake of this.cakes) {
         if (!cake.active) continue;
-        // Draw cake at grid coordinates
-        const px = cake.x * CELL + CELL / 2;
-        const py = cake.y * CELL + CELL / 2;
-        ctx.fillText("🎂", px, py);
+        const px = cake.x * CELL, py = cake.y * CELL;
+
+        ctx.save();
+        ctx.translate(px + CELL/2, py + CELL/2);
+
+        // Background pill (2x bigger than mushroom)
+        ctx.fillStyle = "rgba(0,0,0,0.28)";
+        ctx.beginPath();
+        ctx.roundRect(-CELL+2, -CELL+2, CELL*2-4, CELL*2-4, 6);
+        ctx.fill();
+
+        // Birthday cake emoji - 2x the size of mushroom (36px)
+        ctx.font = "36px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.98)";
+        ctx.fillText("🎂", 0, 2);
+
+        ctx.restore();
       }
       ctx.restore();
     }
