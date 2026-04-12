@@ -689,12 +689,13 @@
       this.active = false;
       this.x = 0; this.y = 0;
       this.vx = 0; this.vy = 0;
-      this.w = CELL * 3.75; this.h = CELL * 3.75; // 75% of original size
+      this.w = CELL * 2.8125; this.h = CELL * 2.8125; // 56.25% of original size (75% of 75%)
       this.speed = 60; // Slower than Rita (200 px/sec)
       this.life = 0;
       this.animFrame = 0;
       this.animTimer = 0;
       this.nextCakeAt = 0; // When to drop the cake
+      this.cakesDropped = 0; // Track how many cakes have been dropped (0-2)
     }
     setSpeed(pxPerSec) { this.speed = pxPerSec; }
 
@@ -721,8 +722,9 @@
       this.active = true;
       this.life = 0;
       this.animFrame = 0; this.animTimer = 0;
-      // Drop cake 2-3 seconds into her journey
-      this.nextCakeAt = 2 + rng.next() * 1;
+      // Drop first cake 1-2 seconds into her journey
+      this.nextCakeAt = 1 + rng.next() * 1;
+      this.cakesDropped = 0;
     }
 
     update(dt) {
@@ -973,6 +975,7 @@
       this.state = "menu";
       this.mode = "single_jay";
       this.speedLevel = "high";
+      this.countdownTime = 0; // For 3-2-1 countdown before game start
 
       this.tickHz = 10;
       this.tickDt = 1 / this.tickHz;
@@ -1016,7 +1019,7 @@
     setMode(m)  { this.mode = m; }
     setSpeedLevel(s) { this.speedLevel = s; }
 
-    startGame() { this._resetWorld(); this.state = "running"; }
+    startGame() { this._resetWorld(); this.state = "countdown"; this.countdownTime = 3; }
     backToMenu() { this.state = "menu"; }
     togglePause() { if (this.state==="running") this.state="paused"; else if (this.state==="paused") this.state="running"; }
     restart()    { this._resetWorld(); this.state = "running"; }
@@ -1087,6 +1090,14 @@
         let dt = clamp(t - this.lastT, 0, 0.25);
         this.lastT = t;
 
+        // Handle countdown before game starts
+        if (this.state === "countdown") {
+          this.countdownTime -= dt;
+          if (this.countdownTime <= 0) {
+            this.state = "running";
+          }
+        }
+
         if (this.state === "running") {
           // Rita spawn timer
           this.ritaTimer += dt;
@@ -1146,13 +1157,19 @@
 
           if (this.chipy.active) {
             this.chipy.update(dt);
-            // Drop one cake when timer reaches 0 (happens once per appearance)
-            if (this.chipy.shouldDropCake()) {
+            // Drop up to 2 cakes during Chipy's journey
+            if (this.chipy.shouldDropCake() && this.chipy.cakesDropped < 2) {
               const pos = this.chipy.getCakeGridPos();
               const cake = new Cake();
               cake.spawn(pos.gx, pos.gy, nowSec());
               this.cakes.push(cake);
-              this.chipy.nextCakeAt = Infinity; // Prevent dropping again this appearance
+              this.chipy.cakesDropped++;
+              // Schedule next cake drop (2 seconds after this one)
+              if (this.chipy.cakesDropped < 2) {
+                this.chipy.nextCakeAt = 2 + this.rng.next() * 0.5;
+              } else {
+                this.chipy.nextCakeAt = Infinity; // No more cakes after 2
+              }
             }
           }
 
@@ -1499,6 +1516,26 @@
       this._drawSnake(ctx, this.dani);
       this._drawHUD(ctx);
 
+      if (this.state === "countdown") {
+        // Show countdown overlay
+        ctx.fillStyle = "rgba(0,0,0,0.3)";
+        ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+        // Countdown number
+        ctx.fillStyle = "#fff";
+        ctx.font = "bold 120px system-ui, sans-serif";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        const countNum = Math.ceil(this.countdownTime);
+        ctx.fillText(countNum, CANVAS_W/2, CANVAS_H/2 - 80);
+
+        // Instructions
+        ctx.font = "18px system-ui, sans-serif";
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.textAlign = "center"; ctx.textBaseline = "middle";
+        ctx.fillText("Use your finger to swipe", CANVAS_W/2, CANVAS_H/2 + 80);
+        ctx.fillText("Up, Down, Left, Right", CANVAS_W/2, CANVAS_H/2 + 110);
+      }
+
       if (this.state === "paused") {
         ctx.fillStyle = "rgba(0,0,0,0.45)";
         ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
@@ -1597,10 +1634,10 @@
         ctx.roundRect(-CELL+2, -CELL+2, CELL*2-4, CELL*2-4, 6);
         ctx.fill();
 
-        // Birthday cake emoji - 2x the size of mushroom (36px)
+        // Cupcake emoji - 2x the size of mushroom (36px)
         ctx.font = "36px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
         ctx.fillStyle = "rgba(255,255,255,0.98)";
-        ctx.fillText("🎂", 0, 2);
+        ctx.fillText("🧁", 0, 2);
 
         ctx.restore();
       }
