@@ -724,35 +724,40 @@
       this.active = false;
       this.x = 0; this.y = 0;
       this.vx = 0; this.vy = 0;
-      this.w = CELL * 5; this.h = CELL * 5; // 5x bigger than Rita
-      this.speed = 100; // Half of Rita's speed (200 px/sec)
+      this.w = CELL * 3.75; this.h = CELL * 3.75; // 75% of original size
+      this.speed = 60; // Slower than Rita (200 px/sec)
       this.life = 0;
       this.animFrame = 0;
       this.animTimer = 0;
       this.nextCakeAt = 0; // When to drop the cake
-      this.cakeDropped = false; // Only drop one cake per appearance
     }
     setSpeed(pxPerSec) { this.speed = pxPerSec; }
 
     spawn(rng) {
-      const edge = rng.int(0, 3);
-      const gx = rng.int(0, GRID_W - 2) * CELL;
-      const gy = rng.int(0, GRID_H - 2) * CELL;
+      // Only spawn from left or right (no top/bottom to avoid flying appearance)
+      const edge = rng.int(0, 1); // 0=left, 1=right
+      const gy = rng.int(2, GRID_H - 2) * CELL; // Random vertical position
       let x, y, ang;
-      // Tighter angle constraints to ensure full screen traversal
-      if (edge === 0)      { x = -this.w;      y = gy; ang = (rng.next()*0.3)-0.15; } // ~0° ±8.6°
-      else if (edge === 1) { x = CANVAS_W;     y = gy; ang = Math.PI+(rng.next()*0.3)-0.15; } // ~180° ±8.6°
-      else if (edge === 2) { x = gx; y = -this.h;      ang = (Math.PI/2)+(rng.next()*0.3)-0.15; } // ~90° ±8.6°
-      else                 { x = gx; y = CANVAS_H;     ang = (-Math.PI/2)+(rng.next()*0.3)-0.15; } // ~270° ±8.6°
+      // Diagonal angles only
+      if (edge === 0) {
+        // From left, going right and slightly up or down (±20° from horizontal)
+        x = -this.w;
+        y = gy;
+        ang = (rng.next() * 0.7) - 0.35; // -20° to +20°
+      } else {
+        // From right, going left and slightly up or down
+        x = CANVAS_W;
+        y = gy;
+        ang = Math.PI + (rng.next() * 0.7) - 0.35; // 180° ± 20°
+      }
       this.x = x; this.y = y;
       this.vx = Math.cos(ang)*this.speed;
       this.vy = Math.sin(ang)*this.speed;
       this.active = true;
       this.life = 0;
       this.animFrame = 0; this.animTimer = 0;
-      // Set random time to drop cake (0.5-4.5 seconds into journey)
-      this.nextCakeAt = 0.5 + rng.next() * 4;
-      this.cakeDropped = false;
+      // Drop cake 2-3 seconds into her journey
+      this.nextCakeAt = 2 + rng.next() * 1;
     }
 
     update(dt) {
@@ -773,7 +778,7 @@
     }
 
     shouldDropCake() {
-      return this.active && this.nextCakeAt <= 0 && !this.cakeDropped;
+      return this.active && this.nextCakeAt <= 0;
     }
 
     getCakeGridPos() {
@@ -1161,7 +1166,6 @@
             // Spawn Chipy more frequently when snakes are 8+ cells (25-30 seconds)
             if (!this.chipy.active && !this.rita.active && this.chipyTimer >= 25 + this.rng.next() * 5) {
               this.chipyTimer = 0;
-              this.chipy.cakeDropped = false; // Ensure reset before spawn
               this.chipy.spawn(this.rng);
               this.chipyNotifTime = nowSec(); // Show notification
               this.audio.positiveChime(); // Chipy arrival sound
@@ -1173,13 +1177,13 @@
 
           if (this.chipy.active) {
             this.chipy.update(dt);
-            // Drop one cake at random point during Chipy's journey
+            // Drop one cake when timer reaches 0 (happens once per appearance)
             if (this.chipy.shouldDropCake()) {
               const pos = this.chipy.getCakeGridPos();
               const cake = new Cake();
               cake.spawn(pos.gx, pos.gy, nowSec());
               this.cakes.push(cake);
-              this.chipy.cakeDropped = true; // Only one cake per appearance
+              this.chipy.nextCakeAt = -Infinity; // Prevent dropping again this appearance
             }
           }
 
