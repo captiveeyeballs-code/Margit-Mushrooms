@@ -1130,6 +1130,7 @@
             // Spawn Chipy more frequently when snakes are 8+ cells (25-30 seconds)
             if (!this.chipy.active && !this.rita.active && this.chipyTimer >= 25 + this.rng.next() * 5) {
               this.chipyTimer = 0;
+              this.chipy.cakeDropped = false; // Ensure reset before spawn
               this.chipy.spawn(this.rng);
               this.chipyNotifTime = nowSec(); // Show notification
               this.audio.positiveChime(); // Chipy arrival sound
