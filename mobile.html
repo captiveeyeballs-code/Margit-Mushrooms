@@ -702,19 +702,19 @@
     spawn(rng) {
       // Only spawn from left or right (no top/bottom to avoid flying appearance)
       const edge = rng.int(0, 1); // 0=left, 1=right
-      const gy = rng.int(2, GRID_H - 2) * CELL; // Random vertical position
+      const gy = rng.int(3, GRID_H - 3) * CELL; // Random vertical position, with more margin
       let x, y, ang;
-      // Diagonal angles only
+      // Diagonal angles only - reduced to ±10° for better full-screen crossing
       if (edge === 0) {
-        // From left, going right and slightly up or down (±20° from horizontal)
+        // From left, going right and slightly up or down (±10° from horizontal)
         x = -this.w;
         y = gy;
-        ang = (rng.next() * 0.7) - 0.35; // -20° to +20°
+        ang = (rng.next() * 0.35) - 0.175; // -10° to +10°
       } else {
         // From right, going left and slightly up or down
         x = CANVAS_W;
         y = gy;
-        ang = Math.PI + (rng.next() * 0.7) - 0.35; // 180° ± 20°
+        ang = Math.PI + (rng.next() * 0.35) - 0.175; // 180° ± 10°
       }
       this.x = x; this.y = y;
       this.vx = Math.cos(ang)*this.speed;
@@ -1588,7 +1588,7 @@
           ctx.stroke();
         }
 
-        ctx.font = "18px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
+        ctx.font = "13.5px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
         ctx.fillStyle = "rgba(255,255,255,0.98)";
         ctx.fillText("🍄", 0, 1);
 
@@ -1674,7 +1674,7 @@
         ctx.ellipse(px+CELL/2, py+CELL/2+7, 7, 3.5, 0, 0, Math.PI*2);
         ctx.fill();
         ctx.fillStyle = "rgba(255,255,255,0.98)";
-        ctx.fillText("💩", px+CELL/2, py+CELL/2+1);
+        ctx.fillText("😡", px+CELL/2, py+CELL/2+1);
       }
       ctx.globalAlpha = 1;
       ctx.restore();
