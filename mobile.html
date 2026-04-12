@@ -151,7 +151,7 @@
 
     <!-- Rita warning banner -->
     <div id="ritaAlert" class="rita-alert">🚨 Rita is looking for us!! 🚨</div>
-    <div id="chipyAlert" class="chipy-alert">🍰 Chipy made a cake! 🍰</div>
+    <div id="chipyAlert" class="chipy-alert">🧁 Chipy made some cakes!! 🧁</div>
 
     <!-- Two-player swipe zone label -->
     <div id="touchZoneLabel">◀ Swipe — Dani &nbsp;|&nbsp; Jay — Swipe ▶</div>
@@ -799,24 +799,38 @@
       if (!state.mushrooms.length && !state.cakes.length) return null;
       const start = snake.head();
       const blocked = this._blocked(state, snake, otherSnake);
-      const q = [{ x:start.x, y:start.y }];
-      const visited = new Set([key2(start.x, start.y)]);
-      const parent = new Map(), parentDir = new Map();
-      const targets = new Set();
-      // Include mushrooms
-      for (const m of state.mushrooms) {
-        targets.add(key2(m.x, m.y));
-      }
-      // Include cakes (higher priority targets)
-      for (const c of state.cakes) {
-        targets.add(key2(c.x, c.y));
-      }
-      let found = null;
+      const sk = key2(start.x, start.y);
 
+      // Try to find cakes first (higher priority)
+      if (state.cakes.length) {
+        const result = this._bfsTarget(start, blocked, state.cakes, sk, snake.dir);
+        if (result) return result;
+      }
+
+      // Fall back to mushrooms if no cakes found
+      if (state.mushrooms.length) {
+        const result = this._bfsTarget(start, blocked, state.mushrooms, sk, snake.dir);
+        if (result) return result;
+      }
+
+      return null;
+    }
+
+    _bfsTarget(start, blocked, targets, startKey, currentDir) {
+      const q = [{ x:start.x, y:start.y }];
+      const visited = new Set([startKey]);
+      const parent = new Map(), parentDir = new Map();
+      const targetSet = new Set();
+
+      for (const t of targets) {
+        targetSet.add(key2(t.x, t.y));
+      }
+
+      let found = null;
       while (q.length) {
         const cur = q.shift();
         const ck = key2(cur.x, cur.y);
-        if (targets.has(ck) && ck !== key2(start.x, start.y)) { found = ck; break; }
+        if (targetSet.has(ck) && ck !== startKey) { found = ck; break; }
         for (const d of DIRS) {
           let nx = cur.x+d.x; let ny = cur.y+d.y;
           if (nx < 0) nx = GRID_W - 1; else if (nx >= GRID_W) nx = 0;
@@ -827,12 +841,12 @@
           q.push({ x:nx, y:ny });
         }
       }
+
       if (!found) return null;
-      const sk = key2(start.x, start.y);
       let k = found, prev = parent.get(k);
-      while (prev && prev !== sk) { k = prev; prev = parent.get(k); }
+      while (prev && prev !== startKey) { k = prev; prev = parent.get(k); }
       const firstDir = parentDir.get(k) || parentDir.get(found);
-      if (!firstDir || OPP[firstDir] === snake.dir) return null;
+      if (!firstDir || OPP[firstDir] === currentDir) return null;
       return { firstDir };
     }
 
@@ -1628,15 +1642,8 @@
         ctx.save();
         ctx.translate(px + CELL/2, py + CELL/2);
 
-        // Background pill (2x bigger than mushroom)
-        ctx.fillStyle = "rgba(0,0,0,0.28)";
-        ctx.beginPath();
-        ctx.roundRect(-CELL+2, -CELL+2, CELL*2-4, CELL*2-4, 6);
-        ctx.fill();
-
-        // Cupcake emoji - 2x the size of mushroom (36px)
+        // Cupcake emoji - clean without background box
         ctx.font = "36px system-ui, Apple Color Emoji, Segoe UI Emoji, sans-serif";
-        ctx.fillStyle = "rgba(255,255,255,0.98)";
         ctx.fillText("🧁", 0, 2);
 
         ctx.restore();
