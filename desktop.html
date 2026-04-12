@@ -1183,7 +1183,7 @@
               const cake = new Cake();
               cake.spawn(pos.gx, pos.gy, nowSec());
               this.cakes.push(cake);
-              this.chipy.nextCakeAt = -Infinity; // Prevent dropping again this appearance
+              this.chipy.nextCakeAt = Infinity; // Prevent dropping again this appearance
             }
           }
 

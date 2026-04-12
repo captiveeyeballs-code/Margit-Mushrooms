@@ -1152,7 +1152,7 @@
               const cake = new Cake();
               cake.spawn(pos.gx, pos.gy, nowSec());
               this.cakes.push(cake);
-              this.chipy.nextCakeAt = -Infinity; // Prevent dropping again this appearance
+              this.chipy.nextCakeAt = Infinity; // Prevent dropping again this appearance
             }
           }
 
@@ -1493,6 +1493,8 @@
       this._drawMushrooms(ctx);
       this._drawPoops(ctx);
       this._drawRita(ctx);
+      this._drawChipy(ctx);
+      this._drawCakes(ctx);
       this._drawSnake(ctx, this.jay);
       this._drawSnake(ctx, this.dani);
       this._drawHUD(ctx);
