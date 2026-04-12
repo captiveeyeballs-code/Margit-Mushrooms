@@ -725,11 +725,12 @@
       this.x = 0; this.y = 0;
       this.vx = 0; this.vy = 0;
       this.w = CELL * 5; this.h = CELL * 5; // 5x bigger than Rita
-      this.speed = 200;
+      this.speed = 100; // Half of Rita's speed (200 px/sec)
       this.life = 0;
       this.animFrame = 0;
       this.animTimer = 0;
-      this.nextCakeAt = 0; // Drop cakes periodically along her path
+      this.nextCakeAt = 0; // When to drop the cake
+      this.cakeDropped = false; // Only drop one cake per appearance
     }
     setSpeed(pxPerSec) { this.speed = pxPerSec; }
 
@@ -749,6 +750,9 @@
       this.active = true;
       this.life = 0;
       this.animFrame = 0; this.animTimer = 0;
+      // Set random time to drop cake (0.5-4.5 seconds into journey)
+      this.nextCakeAt = 0.5 + rng.next() * 4;
+      this.cakeDropped = false;
     }
 
     update(dt) {
@@ -761,9 +765,6 @@
 
       // Drop cakes periodically along path (like Rita's poops)
       this.nextCakeAt -= dt;
-      if (this.nextCakeAt <= 0) {
-        this.nextCakeAt = 0.4 + Math.random() * 0.2; // Every 0.4-0.6 seconds
-      }
 
       const m = 6;
       if (this.x < -this.w-m || this.x > CANVAS_W+m || this.y < -this.h-m || this.y > CANVAS_H+m) {
@@ -772,7 +773,7 @@
     }
 
     shouldDropCake() {
-      return this.active && this.nextCakeAt <= 0;
+      return this.active && this.nextCakeAt <= 0 && !this.cakeDropped;
     }
 
     getCakeGridPos() {
@@ -1171,13 +1172,13 @@
 
           if (this.chipy.active) {
             this.chipy.update(dt);
-            // Drop cake along Chipy's path if it's time
+            // Drop one cake at random point during Chipy's journey
             if (this.chipy.shouldDropCake()) {
               const pos = this.chipy.getCakeGridPos();
               const cake = new Cake();
               cake.spawn(pos.gx, pos.gy, nowSec());
               this.cakes.push(cake);
-              this.chipy.nextCakeAt = 0.4 + Math.random() * 0.2; // Reset timer (0.4-0.6s interval)
+              this.chipy.cakeDropped = true; // Only one cake per appearance
             }
           }
 
