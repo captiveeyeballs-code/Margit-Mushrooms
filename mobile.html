@@ -559,6 +559,7 @@
       this.body = []; this.dir = "R"; this.nextDir = "R";
       this.pendingGrowth = 0; this.score = 0;
       this.aiLastWanted = "R";
+      this.dirQueue = [];
       this.ateCakeThisVisit = false;
     }
     reset(startCells, dirName) {
@@ -566,16 +567,29 @@
       this.dir = dirName; this.nextDir = dirName;
       this.pendingGrowth = 0; this.score = 0;
       this.aiLastWanted = dirName;
+      this.dirQueue = [];
       this.ateCakeThisVisit = false;
     }
     head() { return this.body[0]; }
     setDesiredDir(dirName) {
       if (!DIR_BY_NAME.has(dirName)) return;
-      if (OPP[dirName] === this.dir) return;
-      this.nextDir = dirName;
+      if (this.nextDir === this.dir) {
+        // No turn queued yet — apply immediately
+        if (OPP[dirName] === this.dir) return;
+        this.nextDir = dirName;
+      } else {
+        // A turn is already pending — buffer one more (keep only latest)
+        if (OPP[dirName] === this.nextDir) return;
+        this.dirQueue = [dirName];
+      }
     }
     lockInDirection() {
       if (OPP[this.nextDir] !== this.dir) this.dir = this.nextDir;
+      // Consume queued direction if available
+      if (this.dirQueue.length) {
+        const next = this.dirQueue.shift();
+        if (OPP[next] !== this.dir) this.nextDir = next;
+      }
     }
     computeNextBody() {
       const d = DIR_BY_NAME.get(this.dir);
@@ -2032,8 +2046,11 @@
       return relX < rect.width / 2 ? "jay" : "dani";
     }
 
+    function haptic() { if (navigator.vibrate) navigator.vibrate(8); }
+
     function applySwipeDir(dir, startClientX) {
       if (game.state !== "running") return;
+      haptic();
       if (game.mode === "two_player") {
         // Split screen: left half → Jay, right half → Dani
         const who = touchPlayer(startClientX);
