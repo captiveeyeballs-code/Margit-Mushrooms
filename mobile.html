@@ -151,7 +151,7 @@
 
     <!-- Rita warning banner -->
     <div id="ritaAlert" class="rita-alert">🚨 Rita is looking for us!! 🚨</div>
-    <div id="chipyAlert" class="chipy-alert">🧁 Chipy made some cakes!! 🧁</div>
+    <div id="chipyAlert" class="chipy-alert">🧁 Chipy's got cakes!</div>
 
     <!-- Two-player swipe zone label -->
     <div id="touchZoneLabel">◀ Swipe — Dani &nbsp;|&nbsp; Jay — Swipe ▶</div>
@@ -1414,6 +1414,8 @@
       this.poops = remaining;
       if (!hitJ && !hitD) return false;
       if (hitJ||hitD) this.audio.shrinkHit();
+      if (hitJ) this.jay.score  = Math.max(0, this.jay.score  - 1);
+      if (hitD) this.dani.score = Math.max(0, this.dani.score - 1);
       let cJ=false, cD=false;
       if (hitJ && !this.jay.shrinkByOne())  cJ=true;
       if (hitD && !this.dani.shrinkByOne()) cD=true;
