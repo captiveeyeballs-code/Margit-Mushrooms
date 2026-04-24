@@ -2022,8 +2022,8 @@
     });
 
     // ---- MULTI-TOUCH SWIPE (supports two players simultaneously) ----
-    const SWIPE_THRESHOLD = 22;
-    const activeTouches = new Map(); // id → { startX, startY }
+    const SWIPE_THRESHOLD = 14;
+    const activeTouches = new Map(); // id → { startX, startY, fired }
     const touchZoneLabel = document.getElementById("touchZoneLabel");
 
     // Show two-player touch zone label when in 2P mode
@@ -2057,7 +2057,7 @@
       audio.init();
 
       for (const t of e.changedTouches) {
-        activeTouches.set(t.identifier, { startX: t.clientX, startY: t.clientY });
+        activeTouches.set(t.identifier, { startX: t.clientX, startY: t.clientY, fired: false });
       }
 
       if (game.state === "menu") {
@@ -2070,7 +2070,23 @@
       }
     }, { passive:false });
 
-    canvas.addEventListener("touchmove", (e) => { e.preventDefault(); }, { passive:false });
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      for (const t of e.changedTouches) {
+        const start = activeTouches.get(t.identifier);
+        if (!start || start.fired) continue;
+        const dx = t.clientX - start.startX;
+        const dy = t.clientY - start.startY;
+        if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) continue;
+        const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "R" : "L") : (dy > 0 ? "D" : "U");
+        applySwipeDir(dir, start.startX);
+        start.fired = true;
+        // Reset origin so a second swipe in the same gesture works
+        start.startX = t.clientX;
+        start.startY = t.clientY;
+        start.fired = false;
+      }
+    }, { passive:false });
 
     canvas.addEventListener("touchend", (e) => {
       e.preventDefault();
