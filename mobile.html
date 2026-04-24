@@ -578,11 +578,9 @@
     computeNextBody() {
       const d = DIR_BY_NAME.get(this.dir);
       const head = this.head();
-      let nx = head.x + d.x;
-      let ny = head.y + d.y;
-      // Full wrap-around on all four edges (Pac-Man style)
-      if (nx < 0) nx = GRID_W - 1; else if (nx >= GRID_W) nx = 0;
-      if (ny < 0) ny = GRID_H - 1; else if (ny >= GRID_H) ny = 0;
+      const nx = head.x + d.x;
+      const ny = head.y + d.y;
+      // Walls are fatal — no wrap-around
       const nextBody = [{ x:nx, y:ny }, ...this.body.map(s => ({ x:s.x, y:s.y }))];
       const willGrow = this.pendingGrowth > 0;
       if (!willGrow) nextBody.pop();
@@ -832,9 +830,8 @@
         const ck = key2(cur.x, cur.y);
         if (targetSet.has(ck) && ck !== startKey) { found = ck; break; }
         for (const d of DIRS) {
-          let nx = cur.x+d.x; let ny = cur.y+d.y;
-          if (nx < 0) nx = GRID_W - 1; else if (nx >= GRID_W) nx = 0;
-          if (ny < 0) ny = GRID_H - 1; else if (ny >= GRID_H) ny = 0;
+          const nx = cur.x+d.x; const ny = cur.y+d.y;
+          if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
           const nk = key2(nx, ny);
           if (visited.has(nk)||blocked.has(nk)) continue;
           visited.add(nk); parent.set(nk, ck); parentDir.set(nk, d.name);
@@ -868,17 +865,15 @@
 
     _immSafe(state, snake, otherSnake, dirName) {
       const d = DIR_BY_NAME.get(dirName), h = snake.head();
-      let nx = h.x+d.x; let ny = h.y+d.y;
-      if (nx < 0) nx = GRID_W - 1; else if (nx >= GRID_W) nx = 0;
-      if (ny < 0) ny = GRID_H - 1; else if (ny >= GRID_H) ny = 0;
+      const nx = h.x+d.x; const ny = h.y+d.y;
+      if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) return false;
       return !this._blocked(state, snake, otherSnake).has(key2(nx, ny));
     }
 
     _flood(state, snake, otherSnake, dirName, max) {
       const d = DIR_BY_NAME.get(dirName), h = snake.head();
-      let sx = h.x+d.x; let sy = h.y+d.y;
-      if (sx < 0) sx = GRID_W - 1; else if (sx >= GRID_W) sx = 0;
-      if (sy < 0) sy = GRID_H - 1; else if (sy >= GRID_H) sy = 0;
+      const sx = h.x+d.x; const sy = h.y+d.y;
+      if (sx < 0 || sy < 0 || sx >= GRID_W || sy >= GRID_H) return 0;
       const blocked = this._blocked(state, snake, otherSnake);
       const sk = key2(sx, sy);
       if (blocked.has(sk)) return 0;
@@ -888,9 +883,8 @@
       while (q.length && count < max) {
         const cur = q.shift(); count++;
         for (const nd of DIRS) {
-          let nx = cur.x+nd.x; let ny = cur.y+nd.y;
-          if (nx < 0) nx = GRID_W - 1; else if (nx >= GRID_W) nx = 0;
-          if (ny < 0) ny = GRID_H - 1; else if (ny >= GRID_H) ny = 0;
+          const nx = cur.x+nd.x; const ny = cur.y+nd.y;
+          if (nx < 0 || ny < 0 || nx >= GRID_W || ny >= GRID_H) continue;
           const k = key2(nx, ny);
           if (vis.has(k)||blocked.has(k)) continue;
           vis.add(k); q.push({ x:nx, y:ny });
@@ -1039,9 +1033,9 @@
     restart()    { this._resetWorld(); this.state = "running"; }
 
     _applySpeed() {
-      const hz = this.speedLevel==="super" ? 14 : this.speedLevel==="stoned" ? 7 : 10;
+      const hz = this.speedLevel==="super" ? 12 : this.speedLevel==="stoned" ? 6 : 9; // ~15% slower
       this.tickHz = hz; this.tickDt = 1/hz; this.snakePxSpeed = hz*CELL;
-      this.rita.setSpeed((this.snakePxSpeed*0.5)*2.6*0.75); // mobile: 25% slower than desktop
+      this.rita.setSpeed((this.snakePxSpeed*0.5)*2.6*0.5625); // 25% slower than before
       this.chipy.setSpeed((this.snakePxSpeed*0.5)*1.3*0.75); // Half of Rita's speed, with mobile factor
     }
 
@@ -1274,7 +1268,9 @@
         const dN = this.dani.computeNextBody();
         const jH = jN.newHead, dH = dN.newHead;
 
-        // All edges wrap — only self/other-snake/Rita collisions are fatal
+        // Wall collision
+        if (jH.x < 0 || jH.y < 0 || jH.x >= GRID_W || jH.y >= GRID_H) cJ=true;
+        if (dH.x < 0 || dH.y < 0 || dH.x >= GRID_W || dH.y >= GRID_H) cD=true;
         if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
         if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
 
@@ -1305,6 +1301,7 @@
         const jN = this.jay.computeNextBody();
         const jH = jN.newHead;
 
+        if (jH.x < 0 || jH.y < 0 || jH.x >= GRID_W || jH.y >= GRID_H) cJ=true;
         if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
         if (!cJ) {
           const dBodies = new Set(this.dani.body.map(s=>key2(s.x,s.y)));
@@ -1324,6 +1321,7 @@
         const dN = this.dani.computeNextBody();
         const dH = dN.newHead;
 
+        if (dH.x < 0 || dH.y < 0 || dH.x >= GRID_W || dH.y >= GRID_H) cD=true;
         if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
         if (!cD) {
           const jBodies = new Set(this.jay.body.map(s=>key2(s.x,s.y)));
