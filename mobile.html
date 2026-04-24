@@ -1289,8 +1289,11 @@
         if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
         if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
 
-        const jSet = new Set(jN.nextBody.map(s=>key2(s.x,s.y)));
-        const dSet = new Set(dN.nextBody.map(s=>key2(s.x,s.y)));
+        // Only the solid 67% of each body can kill the other snake
+        const jSolid = Math.ceil(jN.nextBody.length * 0.67);
+        const dSolid = Math.ceil(dN.nextBody.length * 0.67);
+        const jSet = new Set(jN.nextBody.slice(0, jSolid).map(s=>key2(s.x,s.y)));
+        const dSet = new Set(dN.nextBody.slice(0, dSolid).map(s=>key2(s.x,s.y)));
         const jHK = key2(jH.x,jH.y), dHK = key2(dH.x,dH.y);
 
         if (jHK===dHK) { cJ=true; cD=true; }
@@ -1319,7 +1322,8 @@
         if (jH.x < 0 || jH.y < 0 || jH.x >= GRID_W || jH.y >= GRID_H) cJ=true;
         if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
         if (!cJ) {
-          const dBodies = new Set(this.dani.body.map(s=>key2(s.x,s.y)));
+          const dSolid = Math.ceil(this.dani.body.length * 0.67);
+          const dBodies = new Set(this.dani.body.slice(0, dSolid).map(s=>key2(s.x,s.y)));
           if (dBodies.has(key2(jH.x,jH.y))) cJ=true;
         }
         jRita = !cJ && this._snakeHitsRita(jN.nextBody);
@@ -1339,7 +1343,8 @@
         if (dH.x < 0 || dH.y < 0 || dH.x >= GRID_W || dH.y >= GRID_H) cD=true;
         if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
         if (!cD) {
-          const jBodies = new Set(this.jay.body.map(s=>key2(s.x,s.y)));
+          const jSolid = Math.ceil(this.jay.body.length * 0.67);
+          const jBodies = new Set(this.jay.body.slice(0, jSolid).map(s=>key2(s.x,s.y)));
           if (jBodies.has(key2(dH.x,dH.y))) cD=true;
         }
         dRita = !cD && this._snakeHitsRita(dN.nextBody);
@@ -1430,7 +1435,9 @@
 
     _headHitsBody(body) {
       const hk = key2(body[0].x, body[0].y);
-      for (let i=1; i<body.length; i++) if (key2(body[i].x,body[i].y)===hk) return true;
+      // Last 33% of tail is a ghost zone — same rule as Rita
+      const checkUpto = Math.ceil(body.length * 0.67);
+      for (let i=1; i<checkUpto; i++) if (key2(body[i].x,body[i].y)===hk) return true;
       return false;
     }
     _snakeHitsRita(body) {
@@ -1502,9 +1509,14 @@
 
     _gameOver(info) {
       this.state="gameover"; this.gameOverInfo=info;
+      // Save high scores before zeroing the loser
       if (this.jay.score  > this.highJay)  this.highJay  = this.jay.score;
       if (this.dani.score > this.highDani) this.highDani = this.dani.score;
       this._saveHigh();
+      // Loser always ends with zero points
+      if (info.winner === "jay")  this.dani.score = 0;
+      else if (info.winner === "dani") this.jay.score = 0;
+      else { this.jay.score = 0; this.dani.score = 0; } // draw
       updateGameOverUI(this);
       showGameOver(true);
     }
