@@ -2029,7 +2029,8 @@
 
     // ---- MULTI-TOUCH SWIPE (supports two players simultaneously) ----
     const SWIPE_THRESHOLD = 14;
-    const activeTouches = new Map(); // id → { startX, startY, fired }
+    const SWIPE_COOLDOWN = 120; // ms between swipe triggers on same finger
+    const activeTouches = new Map(); // id → { startX, startY, fired, lastFiredAt }
     const touchZoneLabel = document.getElementById("touchZoneLabel");
 
     // Show two-player touch zone label when in 2P mode
@@ -2046,11 +2047,8 @@
       return relX < rect.width / 2 ? "jay" : "dani";
     }
 
-    function haptic() { if (navigator.vibrate) navigator.vibrate(8); }
-
     function applySwipeDir(dir, startClientX) {
       if (game.state !== "running") return;
-      haptic();
       if (game.mode === "two_player") {
         // Split screen: left half → Jay, right half → Dani
         const who = touchPlayer(startClientX);
@@ -2066,7 +2064,7 @@
       audio.init();
 
       for (const t of e.changedTouches) {
-        activeTouches.set(t.identifier, { startX: t.clientX, startY: t.clientY, fired: false });
+        activeTouches.set(t.identifier, { startX: t.clientX, startY: t.clientY, fired: false, lastFiredAt: 0 });
       }
 
       if (game.state === "menu") {
@@ -2087,13 +2085,14 @@
         const dx = t.clientX - start.startX;
         const dy = t.clientY - start.startY;
         if (Math.abs(dx) < SWIPE_THRESHOLD && Math.abs(dy) < SWIPE_THRESHOLD) continue;
+        const now = Date.now();
+        if (now - start.lastFiredAt < SWIPE_COOLDOWN) continue; // too soon
         const dir = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? "R" : "L") : (dy > 0 ? "D" : "U");
         applySwipeDir(dir, start.startX);
-        start.fired = true;
         // Reset origin so a second swipe in the same gesture works
         start.startX = t.clientX;
         start.startY = t.clientY;
-        start.fired = false;
+        start.lastFiredAt = now;
       }
     }, { passive:false });
 
