@@ -904,11 +904,7 @@
 
     _blocked(state, snake, otherSnake) {
       const b = new Set();
-      const noOwnTail = snake.pendingGrowth > 0;
-      for (let i=0; i<snake.body.length; i++) {
-        if (i===snake.body.length-1 && !noOwnTail) continue;
-        b.add(key2(snake.body[i].x, snake.body[i].y));
-      }
+      // Own body is NOT blocked — snake can pass through itself
       const noOtherTail = otherSnake.pendingGrowth > 0;
       for (let i=0; i<otherSnake.body.length; i++) {
         if (i===otherSnake.body.length-1 && !noOtherTail) continue;
@@ -1283,11 +1279,9 @@
         const dN = this.dani.computeNextBody();
         const jH = jN.newHead, dH = dN.newHead;
 
-        // Wall collision
+        // Wall collision (self-collision is not fatal)
         if (jH.x < 0 || jH.y < 0 || jH.x >= GRID_W || jH.y >= GRID_H) cJ=true;
         if (dH.x < 0 || dH.y < 0 || dH.x >= GRID_W || dH.y >= GRID_H) cD=true;
-        if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
-        if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
 
         // Only the solid 67% of each body can kill the other snake
         const jSolid = Math.ceil(jN.nextBody.length * 0.67);
@@ -1320,7 +1314,6 @@
         const jH = jN.newHead;
 
         if (jH.x < 0 || jH.y < 0 || jH.x >= GRID_W || jH.y >= GRID_H) cJ=true;
-        if (!cJ && this._headHitsBody(jN.nextBody)) cJ=true;
         if (!cJ) {
           const dSolid = Math.ceil(this.dani.body.length * 0.67);
           const dBodies = new Set(this.dani.body.slice(0, dSolid).map(s=>key2(s.x,s.y)));
@@ -1341,7 +1334,6 @@
         const dH = dN.newHead;
 
         if (dH.x < 0 || dH.y < 0 || dH.x >= GRID_W || dH.y >= GRID_H) cD=true;
-        if (!cD && this._headHitsBody(dN.nextBody)) cD=true;
         if (!cD) {
           const jSolid = Math.ceil(this.jay.body.length * 0.67);
           const jBodies = new Set(this.jay.body.slice(0, jSolid).map(s=>key2(s.x,s.y)));
