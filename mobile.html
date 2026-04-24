@@ -559,12 +559,14 @@
       this.body = []; this.dir = "R"; this.nextDir = "R";
       this.pendingGrowth = 0; this.score = 0;
       this.aiLastWanted = "R";
+      this.ateCakeThisVisit = false;
     }
     reset(startCells, dirName) {
       this.body = startCells.map(p => ({ x:p.x, y:p.y }));
       this.dir = dirName; this.nextDir = dirName;
       this.pendingGrowth = 0; this.score = 0;
       this.aiLastWanted = dirName;
+      this.ateCakeThisVisit = false;
     }
     head() { return this.body[0]; }
     setDesiredDir(dirName) {
@@ -799,15 +801,22 @@
       const blocked = this._blocked(state, snake, otherSnake);
       const sk = key2(start.x, start.y);
 
-      // Try to find cakes first (higher priority)
-      if (state.cakes.length) {
+      // If AI hasn't eaten a cake yet this Chipy visit, go for a cake first.
+      // After eating one cake, prioritise mushrooms so the human has a fair shot at the second.
+      if (state.cakes.length && !snake.ateCakeThisVisit) {
         const result = this._bfsTarget(start, blocked, state.cakes, sk, snake.dir);
         if (result) return result;
       }
 
-      // Fall back to mushrooms if no cakes found
+      // Mushrooms — always the fallback (and the priority after first cake eaten)
       if (state.mushrooms.length) {
         const result = this._bfsTarget(start, blocked, state.mushrooms, sk, snake.dir);
+        if (result) return result;
+      }
+
+      // Once mushroom eaten, allow going for a second cake if still available
+      if (state.cakes.length && snake.ateCakeThisVisit) {
+        const result = this._bfsTarget(start, blocked, state.cakes, sk, snake.dir);
         if (result) return result;
       }
 
@@ -959,7 +968,7 @@
   }
 
   function drawChipySprite(ctx, chipyAsset, x, y, w, h, frame) {
-    const DISP_W = 240, DISP_H = 160; // 3:2 ratio, large display size
+    const DISP_W = 204, DISP_H = 136; // 15% smaller than original 240x160
     const dx = x - (DISP_W - w) / 2;
     const dy = y - (DISP_H - h) / 2;
 
@@ -1163,8 +1172,14 @@
             this.chipyTimer = 0;
           }
 
+          const wasChipyActive = this.chipy.active;
           if (this.chipy.active) {
             this.chipy.update(dt);
+            // When Chipy leaves, reset cake-eaten flags so AI starts fresh next visit
+            if (wasChipyActive && !this.chipy.active) {
+              this.jay.ateCakeThisVisit = false;
+              this.dani.ateCakeThisVisit = false;
+            }
             // Drop up to 2 cakes during Chipy's journey
             if (this.chipy.shouldDropCake() && this.chipy.cakesDropped < 2) {
               const pos = this.chipy.getCakeGridPos();
@@ -1374,6 +1389,8 @@
             cake.active = false;
             this.cakes.splice(i, 1);
             this.audio.positiveChime(); // Play same sound as Chipy arrival
+            // Mark AI snake so it prioritises mushrooms before going for a second cake
+            if (!snake.isHuman) snake.ateCakeThisVisit = true;
             break;
           }
         }
