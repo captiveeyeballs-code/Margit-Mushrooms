@@ -80,6 +80,10 @@ Claude in Chrome extension is connected and working. Can navigate GitHub, click 
 - **Poop hits now deduct 1 point** (min 0) — both mobile and desktop
 - **Chipy alert text** set to "🧁 Chipy made cakes! 🧁" (fits mobile screen without wrapping)
 - **test-branch** — no-self-collision change (snakes can pass through own body, not each other)
+- **Mobile input queue** — double-swipes now register properly; `dirQueue` buffers one queued turn
+- **Swipe cooldown** — 120 ms minimum between swipe firings (`SWIPE_COOLDOWN`) prevents accidental over-rotation
+- **Ghost tail more visible** — alpha raised 0.22 → 0.38 so players can spot the safe zone
+- Self-collision restored on main (was only ever removed on test-branch)
 
 ## How to deploy
 Drag the entire `Margit-Mushrooms` folder onto [app.netlify.com](https://app.netlify.com).
