@@ -86,7 +86,14 @@ Claude in Chrome extension is connected and working. Can navigate GitHub, click 
 - Self-collision restored on main (was only ever removed on test-branch)
 
 ## How to deploy
-Drag the entire `Margit-Mushrooms` folder onto [app.netlify.com](https://app.netlify.com).
+Use the Netlify CLI from the terminal (token is stored in `~/.zshrc` — no pasting needed):
+```bash
+netlify deploy --dir=. --prod
+```
+If the token is missing (e.g. fresh Mac), regenerate at app.netlify.com → User Settings → OAuth → Personal access tokens, then run:
+```bash
+echo 'export NETLIFY_AUTH_TOKEN=your_token_here' >> ~/.zshrc && source ~/.zshrc
+```
 
 ## End of session checklist
 - [ ] All changes committed and pushed to GitHub
