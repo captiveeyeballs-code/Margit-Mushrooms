@@ -1508,9 +1508,14 @@
 
     _gameOver(info) {
       this.state="gameover"; this.gameOverInfo=info;
+      // Save high scores before zeroing the loser
       if (this.jay.score  > this.highJay)  this.highJay  = this.jay.score;
       if (this.dani.score > this.highDani) this.highDani = this.dani.score;
       this._saveHigh();
+      // Loser always ends with zero points
+      if (info.winner === "jay")  this.dani.score = 0;
+      else if (info.winner === "dani") this.jay.score = 0;
+      else { this.jay.score = 0; this.dani.score = 0; } // draw
       updateGameOverUI(this);
       showGameOver(true);
     }
